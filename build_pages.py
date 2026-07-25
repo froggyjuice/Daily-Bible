@@ -96,6 +96,8 @@ def build() -> dict:
     shutil.copy(STATIC_DIR / "style.css",    BUILD_DIR / "style.css")
     shutil.copy(STATIC_DIR / "app-pages.js", BUILD_DIR / "app-pages.js")
     shutil.copy(STATIC_DIR / "favicon.svg",  BUILD_DIR / "favicon.svg")
+    (BUILD_DIR / ".nojekyll").touch()
+
 
     return {"main": main_entries, "soon": soon_entries}
 
