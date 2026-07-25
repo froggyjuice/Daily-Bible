@@ -23,12 +23,19 @@
     <div class="header-brand">
       <span class="header-cross">✝</span>
       <div>
-        <h1 class="header-title">매일성경</h1>
+        <h1 class="header-title" id="header-title-text">매일성경</h1>
         <p class="header-sub">Daily Bible Dashboard</p>
       </div>
     </div>
 
+    <!-- 버전 토글 (매일성경 / 매일성경 순) -->
+    <div class="version-toggle-group" id="version-group" role="group" aria-label="성경 버전 선택">
+      <button class="version-btn active" id="version-btn-main" onclick="switchVersion('main')">📖 매일성경</button>
+      <button class="version-btn" id="version-btn-soon" onclick="switchVersion('soon')">🌿 매일성경 순</button>
+    </div>
+
     <div class="header-meta">
+
       <div class="schedule-badge" id="schedule-badge">
         <span class="schedule-icon">🕔</span>
         <span id="next-run-label">스케줄 로딩 중…</span>

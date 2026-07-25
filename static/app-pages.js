@@ -4,8 +4,9 @@
    ──────────────────────────────────────────── */
 
 // ── 전역 상태 ────────────────────────────────
-let currentDate = null;
-let currentTab  = 'bonmun';
+let currentVersion = 'main';          // 'main' | 'soon'
+let currentDate    = null;
+let currentTab     = 'bonmun';
 
 // 캘린더 상태
 let calYear  = new Date().getFullYear();
@@ -15,6 +16,28 @@ const entrySet = new Set();
 // 사이드바 / 뷰 상태
 let currentView      = 'list';
 let sidebarCollapsed = false;
+
+
+// ═══════════════════════════════════════════
+//  버전 전환 (매일성경 ↔ 매일성경 순)
+// ═══════════════════════════════════════════
+async function switchVersion(ver) {
+  if (currentVersion === ver) return;
+  currentVersion = ver;
+  currentDate = null;
+
+  document.getElementById('version-btn-main')?.classList.toggle('active', ver === 'main');
+  document.getElementById('version-btn-soon')?.classList.toggle('active', ver === 'soon');
+  
+  const titleText = document.getElementById('header-title-text');
+  if (titleText) {
+    titleText.textContent = ver === 'main' ? '매일성경' : '매일성경 순';
+  }
+
+  clearPanels();
+  document.getElementById('content-meta').textContent = '날짜를 선택하세요';
+  await loadEntries();
+}
 
 
 // ═══════════════════════════════════════════
@@ -123,8 +146,13 @@ function switchView(view, save = true) {
 // ═══════════════════════════════════════════
 async function loadEntries() {
   try {
-    // GitHub Pages의 data/ 디렉토리에서 로드
-    const entries = await staticFetch('./data/entries.json');
+    let entries = [];
+    try {
+      entries = await staticFetch(`./data/${currentVersion}/entries.json`);
+    } catch (_) {
+      // 레거시 폴백
+      entries = await staticFetch('./data/entries.json');
+    }
 
     entrySet.clear();
     entries.forEach(d => entrySet.add(d));
@@ -132,7 +160,11 @@ async function loadEntries() {
     renderSidebar(entries);
 
     // 최신 날짜 자동 선택
-    if (entries.length > 0) selectDate(entries[0]);
+    if (entries.length > 0) {
+      await selectDate(entries[0]);
+    } else {
+      clearPanels();
+    }
 
     // 마지막 업데이트 시각 표시
     if (entries.length > 0) {
@@ -193,18 +225,25 @@ async function selectDate(dateStr) {
 
   currentDate = dateStr;
   clearPanels();
+  const verLabel = currentVersion === 'main' ? '매일성경' : '매일성경 순';
   document.getElementById('content-meta').textContent =
-    `${dateStr} · ${formatDateKo(dateStr)}`;
+    `[${verLabel}] ${dateStr} · ${formatDateKo(dateStr)}`;
 
   if (currentView === 'calendar') renderCalendar(calYear, calMonth);
 
   try {
-    const { content } = await staticFetch(`./data/${dateStr}.json`);
-    parseAndRender(content);
+    let data;
+    try {
+      data = await staticFetch(`./data/${currentVersion}/${dateStr}.json`);
+    } catch (_) {
+      data = await staticFetch(`./data/${dateStr}.json`);
+    }
+    parseAndRender(data.content);
   } catch (e) {
     showToast('콘텐츠 로드 실패: ' + e.message, 'error');
   }
 }
+
 
 
 // ═══════════════════════════════════════════

@@ -47,7 +47,7 @@ def git_commit(message: str):
 
 
 # ── Deploy ──────────────────────────────────────
-def deploy(entries: list):
+def deploy(results: dict):
     print("[2/4] 현재 브랜치 확인...")
     original  = run("git branch --show-current")
     print(f"  -> {original}")
@@ -77,9 +77,11 @@ def deploy(entries: list):
     print("[4/4] 커밋 & push...")
     run("git add -A")
 
-    latest  = entries[0] if entries else "none"
+    main_entries = results.get("main", []) if isinstance(results, dict) else results
+    soon_entries = results.get("soon", []) if isinstance(results, dict) else []
+    latest  = main_entries[0] if main_entries else "none"
     ts      = datetime.now().strftime("%Y-%m-%d %H:%M")
-    git_commit(f"[Pages] {ts} | latest: {latest} | {len(entries)} entries")
+    git_commit(f"[Pages] {ts} | latest: {latest} | main: {len(main_entries)}, soon: {len(soon_entries)}")
 
     run("git push origin gh-pages")
 
@@ -92,13 +94,14 @@ def deploy(entries: list):
 
     print()
     print("=" * 52)
-    print(f"  gh-pages 배포 완료!  ({len(entries)}개 항목)")
+    print(f"  gh-pages 배포 완료! (매일성경: {len(main_entries)}개, 매일성경 순: {len(soon_entries)}개)")
     print(f"  URL: https://froggyjuice.github.io/Daily-Bible/")
     print("=" * 52)
 
 
 if __name__ == "__main__":
     print("[1/4] 정적 사이트 빌드...")
-    entries = build_pages()
-    print(f"  -> {len(entries)}개 항목 완료")
-    deploy(entries)
+    results = build_pages()
+    print(f"  -> 빌드 완료")
+    deploy(results)
+
