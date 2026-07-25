@@ -1,111 +1,72 @@
 """
-GitHub Pages 빌드 & 배포 스크립트
-========================================
-사용법:
-  python update_pages.py
+로컬 GitHub Pages 배포 스크립트
+================================
+build_pages.py 로 빌드 후 gh-pages 브랜치에 직접 push.
 
-동작:
-  1. output/*.md → data/*.json 변환
-  2. static/ 파일을 Pages용으로 수정 (경로, app.js 교체)
-  3. gh-pages 브랜치에 커밋 & push
-  4. 원래 브랜치(main)로 복귀
+Usage:  python update_pages.py
+
+* CI 환경(GitHub Actions)에서는 daily_scrape.yml 이 대신 처리합니다.
 """
 
-import json
-import shutil
+import os
 import subprocess
 import sys
+import tempfile
 from datetime import datetime
-from pathlib import Path
 
-BASE       = Path(__file__).parent
-OUTPUT_DIR = BASE / "output"
-BUILD_DIR  = BASE / "_pages_build"   # 임시 빌드 디렉토리 (gitignored)
+from build_pages import build as build_pages, BASE, BUILD_DIR
 
 
-# ── 헬퍼 ────────────────────────────────────
-def run(cmd: str, **kwargs):
-    """셸 명령 실행"""
-    result = subprocess.run(cmd, cwd=BASE, shell=True, capture_output=True, text=True, **kwargs)
-    if result.returncode != 0:
-        print(f"[오류] {cmd}\n{result.stderr}")
+# ── Helper ─────────────────────────────────────
+def run(cmd: str, allow_fail: bool = False) -> str:
+    result = subprocess.run(
+        cmd, cwd=BASE, shell=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    stdout = result.stdout.decode("utf-8", errors="replace").strip()
+    stderr = result.stderr.decode("utf-8", errors="replace").strip()
+    if result.returncode != 0 and not allow_fail:
+        print(f"[ERROR] {cmd}")
+        if stderr:
+            print(stderr)
         sys.exit(1)
-    return result.stdout.strip()
+    return stdout
 
 
-# ── Step 1: 정적 사이트 빌드 ─────────────────
-def build():
-    print("[1/4] 정적 사이트 빌드 중...")
-
-    if BUILD_DIR.exists():
-        shutil.rmtree(BUILD_DIR)
-    (BUILD_DIR / "data").mkdir(parents=True)
-
-    # 마크다운 → JSON 변환
-    mds = sorted(OUTPUT_DIR.glob("*.md"), reverse=True)
-    entries = [f.stem for f in mds]
-
-    if not entries:
-        print("  경고: output/ 에 스크랩된 파일이 없습니다")
-
-    # entries.json
-    (BUILD_DIR / "data" / "entries.json").write_text(
-        json.dumps(entries, ensure_ascii=False), encoding="utf-8"
-    )
-
-    # 날짜별 JSON
-    for md in mds:
-        content = md.read_text(encoding="utf-8")
-        data    = {"date": md.stem, "content": content}
-        (BUILD_DIR / "data" / f"{md.stem}.json").write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-
-    print(f"  → {len(entries)}개 항목 JSON 변환 완료")
-
-    # HTML: 경로 수정 + app-pages.js 사용
-    html = (BASE / "static" / "index.html").read_text(encoding="utf-8")
-    html = (html
-        .replace('href="/static/style.css"',   'href="./style.css"')
-        .replace('href="/static/favicon.svg"',  'href="./favicon.svg"')
-        .replace('src="/static/app.js"',        'src="./app-pages.js"')
-    )
-    (BUILD_DIR / "index.html").write_text(html, encoding="utf-8")
-
-    # CSS, JS, 파비콘 복사
-    shutil.copy(BASE / "static" / "style.css",    BUILD_DIR / "style.css")
-    shutil.copy(BASE / "static" / "app-pages.js", BUILD_DIR / "app-pages.js")
-    shutil.copy(BASE / "static" / "favicon.svg",  BUILD_DIR / "favicon.svg")
-
-    print("  → HTML/CSS/JS 복사 완료")
-    return entries
+def git_commit(message: str):
+    """한글 커밋 메시지를 임시 파일로 처리 (Windows shell 인코딩 우회)"""
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", suffix=".txt", delete=False
+    ) as f:
+        f.write(message)
+        tmpfile = f.name
+    try:
+        run(f'git commit -F "{tmpfile}"')
+    finally:
+        os.unlink(tmpfile)
 
 
-# ── Step 2: gh-pages 브랜치 관리 ────────────
-def deploy(entries):
+# ── Deploy ──────────────────────────────────────
+def deploy(entries: list):
     print("[2/4] 현재 브랜치 확인...")
-    original = run("git branch --show-current")
-    print(f"  → 현재 브랜치: {original}")
+    original  = run("git branch --show-current")
+    print(f"  -> {original}")
 
-    # gh-pages 브랜치 존재 여부 확인
-    branches = run("git branch -a")
+    branches  = run("git branch -a")
     has_pages = "gh-pages" in branches
 
+    stash_out = run("git stash", allow_fail=True)
+
     print("[3/4] gh-pages 브랜치로 전환...")
-
-    # 현재 변경사항 임시 저장 (stash)
-    stash = run("git stash")
-
     if has_pages:
         run("git checkout gh-pages")
-        # 기존 파일 전체 삭제 (data/, index.html 등)
-        run("git rm -rf --quiet --ignore-unmatch index.html style.css app-pages.js favicon.svg data/")
+        run("git rm -rf --quiet --ignore-unmatch .", allow_fail=True)
     else:
-        # 새 orphan 브랜치 생성
         run("git checkout --orphan gh-pages")
-        run("git rm -rf --quiet .")
+        run("git rm -rf --quiet .", allow_fail=True)
 
-    # 빌드 파일 복사
+    # 빌드 결과 복사
+    import shutil
     for src in BUILD_DIR.rglob("*"):
         if src.is_file():
             rel = src.relative_to(BUILD_DIR)
@@ -116,27 +77,28 @@ def deploy(entries):
     print("[4/4] 커밋 & push...")
     run("git add -A")
 
-    latest = entries[0] if entries else "없음"
-    msg = f"[Pages] {datetime.now().strftime('%Y-%m-%d %H:%M')} | 최신: {latest} | {len(entries)}건"
-    run(f'git commit -m "{msg}"')
+    latest  = entries[0] if entries else "none"
+    ts      = datetime.now().strftime("%Y-%m-%d %H:%M")
+    git_commit(f"[Pages] {ts} | latest: {latest} | {len(entries)} entries")
+
     run("git push origin gh-pages")
 
-    # 원래 브랜치 복귀
+    # 원래 브랜치로 복귀
     run(f"git checkout {original}")
-    if "No local changes" not in stash:
-        run("git stash pop")
+    if "No local changes" not in stash_out:
+        run("git stash pop", allow_fail=True)
 
-    # 임시 빌드 디렉토리 삭제
-    shutil.rmtree(BUILD_DIR)
+    shutil.rmtree(BUILD_DIR, ignore_errors=True)
 
     print()
-    print("=" * 50)
-    print(f"  gh-pages 배포 완료!")
-    print(f"  {len(entries)}개 항목 서빙 중")
+    print("=" * 52)
+    print(f"  gh-pages 배포 완료!  ({len(entries)}개 항목)")
     print(f"  URL: https://froggyjuice.github.io/Daily-Bible/")
-    print("=" * 50)
+    print("=" * 52)
 
 
 if __name__ == "__main__":
-    entries = build()
+    print("[1/4] 정적 사이트 빌드...")
+    entries = build_pages()
+    print(f"  -> {len(entries)}개 항목 완료")
     deploy(entries)
