@@ -3,9 +3,10 @@ name: Daily Bible Scraper
 # ── 트리거 ───────────────────────────────────
 on:
   schedule:
-    # 매일 05:00 KST (= 20:00 UTC 전날)
-    - cron: '0 20 * * *'
+    # 매일 00:00 KST (= 15:00 UTC 전날)
+    - cron: '0 15 * * *'
   workflow_dispatch:   # GitHub UI에서 수동 실행 버튼
+
 
 # ── 권한 ────────────────────────────────────
 permissions:
@@ -29,13 +30,16 @@ jobs:
           python-version: '3.11'
           cache: pip
 
-      # 3. Playwright 설치 (pip 캐시 활용)
-      - name: Install Playwright
-        run: pip install playwright
+      # 3. 의존성 및 Playwright 설치
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       # 4. Chromium 브라우저 설치
       - name: Install Chromium
         run: playwright install chromium --with-deps
+
 
       # 5. 스크래퍼 실행 → output/YYYY-MM-DD.md 생성
       - name: Run scraper

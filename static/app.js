@@ -3,10 +3,11 @@
    ──────────────────────────────────────────── */
 
 // ── 전역 상태 ────────────────────────────────
-let currentDate = null;
-let currentTab  = 'bonmun';
-let lastStatus  = null;
-let pollTimer   = null;
+let currentVersion = 'main';          // 'main' | 'soon'
+let currentDate    = null;
+let currentTab     = 'bonmun';
+let lastStatus     = null;
+let pollTimer      = null;
 
 // 캘린더 상태
 let calYear  = new Date().getFullYear();
@@ -16,6 +17,28 @@ const entrySet = new Set();                 // "YYYY-MM-DD" 스트링 집합
 // 현재 뷰 상태
 let currentView      = 'list';              // 'list' | 'calendar'
 let sidebarCollapsed = false;
+
+
+// ═══════════════════════════════════════════
+//  버전 전환 (매일성경 ↔ 매일성경 순)
+// ═══════════════════════════════════════════
+async function switchVersion(ver) {
+  if (currentVersion === ver) return;
+  currentVersion = ver;
+  currentDate = null;
+
+  document.getElementById('version-btn-main')?.classList.toggle('active', ver === 'main');
+  document.getElementById('version-btn-soon')?.classList.toggle('active', ver === 'soon');
+  
+  const titleText = document.getElementById('header-title-text');
+  if (titleText) {
+    titleText.textContent = ver === 'main' ? '매일성경' : '매일성경 순';
+  }
+
+  clearPanels();
+  document.getElementById('content-meta').textContent = '날짜를 선택하세요';
+  await loadEntries();
+}
 
 
 // ═══════════════════════════════════════════
@@ -132,8 +155,8 @@ function switchView(view, save = true) {
 async function loadEntries() {
   try {
     const [entries, status] = await Promise.all([
-      apiFetch('/api/entries'),
-      apiFetch('/api/status'),
+      apiFetch(`/api/entries?type=${currentVersion}`),
+      apiFetch(`/api/status?type=${currentVersion}`),
     ]);
 
     // entrySet 채우기
@@ -144,7 +167,11 @@ async function loadEntries() {
     updateStatus(status);
 
     // 최신 날짜 자동 선택
-    if (entries.length > 0) selectDate(entries[0]);
+    if (entries.length > 0) {
+      await selectDate(entries[0]);
+    } else {
+      clearPanels();
+    }
 
   } catch (e) {
     showToast('데이터 로드 실패: ' + e.message, 'error');
@@ -205,19 +232,21 @@ async function selectDate(dateStr) {
   clearPanels();
 
   // 메타 업데이트
+  const verLabel = currentVersion === 'main' ? '매일성경' : '매일성경 순';
   document.getElementById('content-meta').textContent =
-    `${dateStr} · ${formatDateKo(dateStr)}`;
+    `[${verLabel}] ${dateStr} · ${formatDateKo(dateStr)}`;
 
   // 캘린더 셀 갱신
   if (currentView === 'calendar') renderCalendar(calYear, calMonth);
 
   try {
-    const { content } = await apiFetch(`/api/entry/${dateStr}`);
+    const { content } = await apiFetch(`/api/entry/${dateStr}?type=${currentVersion}`);
     parseAndRender(content);
   } catch (e) {
     showToast('콘텐츠 로드 실패: ' + e.message, 'error');
   }
 }
+
 
 
 // ═══════════════════════════════════════════

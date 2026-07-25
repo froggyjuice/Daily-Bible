@@ -1,6 +1,6 @@
 """
 매일성경 웹 대시보드 - FastAPI 백엔드
-APScheduler로 매일 05:00 자동 스크랩 실행
+APScheduler로 매일 00:00 (자정) 자동 스크랩 실행
 """
 import asyncio
 import sys
@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -55,15 +55,17 @@ async def run_scraper_task() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     OUTPUT_DIR.mkdir(exist_ok=True)
+    import scraper
+    scraper.migrate_legacy_files()
 
     scheduler.add_job(
         run_scraper_task,
-        CronTrigger(hour=5, minute=0, timezone="Asia/Seoul"),
+        CronTrigger(hour=0, minute=0, timezone="Asia/Seoul"),
         id="daily_bible",
         replace_existing=True,
     )
     scheduler.start()
-    print("[OK] APScheduler 시작 - 매일 05:00 자동 스크랩 예약됨")
+    print("[OK] APScheduler 시작 - 매일 00:00(자정) 자동 스크랩 예약됨")
 
     yield
 
@@ -75,13 +77,15 @@ app = FastAPI(title="매일성경 대시보드", lifespan=lifespan)
 
 # ── API 엔드포인트 ────────────────────────────────────────
 @app.get("/api/status")
-async def api_status():
+async def api_status(type: str = Query("main")):
     job = scheduler.get_job("daily_bible")
     next_run = None
     if job and job.next_run_time:
         next_run = job.next_run_time.isoformat()
 
-    entries = list(OUTPUT_DIR.glob("*.md"))
+    target_dir = OUTPUT_DIR / (type if type in ["main", "soon"] else "main")
+    entries = list(target_dir.glob("*.md")) if target_dir.exists() else []
+    
     return {
         "is_running":    state["is_running"],
         "last_run":      state["last_run"],
@@ -89,27 +93,33 @@ async def api_status():
         "last_error":    state["last_error"],
         "next_run":      next_run,
         "total_entries": len(entries),
+        "type":          type,
     }
 
 
 @app.get("/api/entries")
-async def api_entries():
-    files = sorted(OUTPUT_DIR.glob("*.md"), reverse=True)
+async def api_entries(type: str = Query("main")):
+    version = type if type in ["main", "soon"] else "main"
+    target_dir = OUTPUT_DIR / version
+    if not target_dir.exists():
+        return []
+    files = sorted(target_dir.glob("*.md"), reverse=True)
     return [f.stem for f in files]
 
 
 @app.get("/api/entry/{date_str}")
-async def api_entry(date_str: str):
+async def api_entry(date_str: str, type: str = Query("main")):
     try:
         datetime.strptime(date_str, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(status_code=400, detail="날짜 형식 오류 (YYYY-MM-DD)")
 
-    path = OUTPUT_DIR / f"{date_str}.md"
+    version = type if type in ["main", "soon"] else "main"
+    path = OUTPUT_DIR / version / f"{date_str}.md"
     if not path.exists():
         raise HTTPException(status_code=404, detail="해당 날짜의 데이터가 없습니다")
 
-    return {"date": date_str, "content": path.read_text(encoding="utf-8")}
+    return {"date": date_str, "type": version, "content": path.read_text(encoding="utf-8")}
 
 
 @app.post("/api/scrape")
@@ -132,3 +142,4 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=False)
+
