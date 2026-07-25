@@ -19,6 +19,42 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Restore archived data from gh-pages
+        run: |
+          git fetch origin gh-pages || true
+          mkdir -p output/main output/soon
+          # gh-pages의 data/main/, data/soon/ JSON을 md로 복원
+          if git show origin/gh-pages:data/main/entries.json > /dev/null 2>&1; then
+            python3 - <<'PYEOF'
+import json, subprocess, pathlib
+
+for ver in ['main', 'soon']:
+    try:
+        result = subprocess.run(
+            ['git', 'show', f'origin/gh-pages:data/{ver}/entries.json'],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            continue
+        entries = json.loads(result.stdout)
+        for date in entries:
+            out_path = pathlib.Path(f'output/{ver}/{date}.md')
+            if out_path.exists():
+                continue
+            r2 = subprocess.run(
+                ['git', 'show', f'origin/gh-pages:data/{ver}/{date}.json'],
+                capture_output=True, text=True
+            )
+            if r2.returncode == 0:
+                data = json.loads(r2.stdout)
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(data['content'], encoding='utf-8')
+                print(f'[복원] {ver}/{date}.md')
+    except Exception as e:
+        print(f'[복원 스킵] {ver}: {e}')
+PYEOF
+          fi
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -32,10 +68,10 @@ jobs:
           playwright install chromium
           playwright install-deps chromium
 
-      - name: Run scraper
+      - name: Run scraper (오늘 본문 추가)
         run: python scraper.py
 
-      - name: Build static pages
+      - name: Build static pages (전체 누적 빌드)
         run: python build_pages.py
 
       - name: Deploy to gh-pages
