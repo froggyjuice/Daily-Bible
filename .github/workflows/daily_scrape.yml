@@ -1,0 +1,58 @@
+name: Daily Bible Scraper
+
+# ── 트리거 ───────────────────────────────────
+on:
+  schedule:
+    # 매일 05:00 KST (= 20:00 UTC 전날)
+    - cron: '0 20 * * *'
+  workflow_dispatch:   # GitHub UI에서 수동 실행 버튼
+
+# ── 권한 ────────────────────────────────────
+permissions:
+  contents: write      # gh-pages 브랜치 push 허용
+
+# ── 작업 ─────────────────────────────────────
+jobs:
+  scrape-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # 1. 소스코드 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Python 환경 설정
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      # 3. Playwright 설치 (pip 캐시 활용)
+      - name: Install Playwright
+        run: pip install playwright
+
+      # 4. Chromium 브라우저 설치
+      - name: Install Chromium
+        run: playwright install chromium --with-deps
+
+      # 5. 스크래퍼 실행 → output/YYYY-MM-DD.md 생성
+      - name: Run scraper
+        run: python scraper.py
+
+      # 6. 정적 사이트 빌드 → _pages_build/ 생성
+      - name: Build GitHub Pages data
+        run: python build_pages.py
+
+      # 7. gh-pages 브랜치에 배포
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_pages_build
+          publish_branch: gh-pages
+          user_name: 'github-actions[bot]'
+          user_email: '41898282+github-actions[bot]@users.noreply.github.com'
+          full_commit_message: |
+            [Pages] ${{ github.run_id }} | ${{ github.run_number }}번째 스크랩
