@@ -23,36 +23,24 @@ jobs:
         run: |
           git fetch origin gh-pages || true
           mkdir -p output/main output/soon
-          # gh-pages의 data/main/, data/soon/ JSON을 md로 복원
           if git show origin/gh-pages:data/main/entries.json > /dev/null 2>&1; then
-            python3 - <<'PYEOF'
-import json, subprocess, pathlib
-
-for ver in ['main', 'soon']:
-    try:
-        result = subprocess.run(
-            ['git', 'show', f'origin/gh-pages:data/{ver}/entries.json'],
-            capture_output=True, text=True
-        )
-        if result.returncode != 0:
-            continue
-        entries = json.loads(result.stdout)
-        for date in entries:
-            out_path = pathlib.Path(f'output/{ver}/{date}.md')
-            if out_path.exists():
-                continue
-            r2 = subprocess.run(
-                ['git', 'show', f'origin/gh-pages:data/{ver}/{date}.json'],
-                capture_output=True, text=True
-            )
-            if r2.returncode == 0:
-                data = json.loads(r2.stdout)
-                out_path.parent.mkdir(parents=True, exist_ok=True)
-                out_path.write_text(data['content'], encoding='utf-8')
-                print(f'[복원] {ver}/{date}.md')
-    except Exception as e:
-        print(f'[복원 스킵] {ver}: {e}')
-PYEOF
+            python3 -c "
+          import json, subprocess, pathlib
+          for ver in ['main', 'soon']:
+              try:
+                  res = subprocess.run(['git', 'show', f'origin/gh-pages:data/{ver}/entries.json'], capture_output=True, text=True)
+                  if res.returncode != 0: continue
+                  for date in json.loads(res.stdout):
+                      out_path = pathlib.Path(f'output/{ver}/{date}.md')
+                      if out_path.exists(): continue
+                      r2 = subprocess.run(['git', 'show', f'origin/gh-pages:data/{ver}/{date}.json'], capture_output=True, text=True)
+                      if r2.returncode == 0:
+                          out_path.parent.mkdir(parents=True, exist_ok=True)
+                          out_path.write_text(json.loads(r2.stdout)['content'], encoding='utf-8')
+                          print(f'[복원] {ver}/{date}.md')
+              except Exception as e:
+                  print(f'[복원 스킵] {ver}: {e}')
+          "
           fi
 
       - name: Set up Python 3.11
