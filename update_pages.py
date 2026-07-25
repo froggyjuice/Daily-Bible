@@ -83,7 +83,8 @@ def deploy(results: dict):
     ts      = datetime.now().strftime("%Y-%m-%d %H:%M")
     git_commit(f"[Pages] {ts} | latest: {latest} | main: {len(main_entries)}, soon: {len(soon_entries)}")
 
-    run("git push origin gh-pages")
+    run("git push --force origin gh-pages")
+
 
     # 원래 브랜치로 복귀
     run(f"git checkout {original}")
