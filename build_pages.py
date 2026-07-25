@@ -60,6 +60,14 @@ def build() -> dict:
     main_entries = process_version("main")
     soon_entries = process_version("soon")
 
+    if not main_entries and not soon_entries:
+        print("  [경고] output/ 에 마크다운 파일이 없어 스크래퍼를 자동 실행합니다...")
+        import asyncio
+        asyncio.run(scraper.main())
+        main_entries = process_version("main")
+        soon_entries = process_version("soon")
+
+
     # 호환성을 위해 레거시 루트 data/ 경로에도 main 데이터 복사
     (BUILD_DIR / "data" / "entries.json").write_text(
         json.dumps(main_entries, ensure_ascii=False),
