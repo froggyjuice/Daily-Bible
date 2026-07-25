@@ -78,8 +78,10 @@ def build() -> dict:
     html = (html
         .replace('href="/static/style.css"',   'href="./style.css"')
         .replace('href="/static/favicon.svg"',  'href="./favicon.svg"')
+        .replace('src="/static/app-pages.js"',  'src="./app-pages.js"')
         .replace('src="/static/app.js"',        'src="./app-pages.js"')
     )
+
     (BUILD_DIR / "index.html").write_text(html, encoding="utf-8")
 
     # CSS / JS / 파비콘 복사

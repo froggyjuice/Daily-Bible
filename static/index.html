@@ -17,7 +17,6 @@
   <!-- ── 헤더 ── -->
   <header class="header" id="app-header">
 
-    <!-- 사이드바 토글 -->
     <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="사이드바 접기/펼치기">&#8249;</button>
 
     <div class="header-brand">
@@ -28,14 +27,13 @@
       </div>
     </div>
 
-    <!-- 버전 토글 (매일성경 / 매일성경 순) -->
+    <!-- 버전 토글 -->
     <div class="version-toggle-group" id="version-group" role="group" aria-label="성경 버전 선택">
       <button class="version-btn active" id="version-btn-main" onclick="switchVersion('main')">📖 매일성경</button>
       <button class="version-btn" id="version-btn-soon" onclick="switchVersion('soon')">🌿 매일성경 순</button>
     </div>
 
     <div class="header-meta">
-
       <div class="schedule-badge" id="schedule-badge">
         <span class="schedule-icon">🕔</span>
         <span id="next-run-label">스케줄 로딩 중…</span>
@@ -62,16 +60,12 @@
   <!-- ── 메인 레이아웃 ── -->
   <div class="layout">
 
-    <!-- 사이드바 -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-inner">
-
-        <!-- 사이드바 헤더 -->
         <div class="sidebar-header">
           <span class="sidebar-title">📅 스크랩 기록</span>
           <div class="sidebar-header-right">
             <span class="sidebar-count" id="total-count">0건</span>
-            <!-- 뷰 전환 버튼 -->
             <div class="view-toggle-group" role="group" aria-label="보기 방식">
               <button class="view-btn active" id="view-btn-list"     onclick="switchView('list')"     title="목록">☰</button>
               <button class="view-btn"        id="view-btn-calendar" onclick="switchView('calendar')" title="캘린더">▦</button>
@@ -79,32 +73,24 @@
           </div>
         </div>
 
-        <!-- 목록 뷰 -->
         <div id="view-list">
           <ul class="date-list" id="date-list">
             <li class="date-item loading-placeholder">로딩 중…</li>
           </ul>
         </div>
 
-        <!-- 캘린더 뷰 -->
         <div id="view-calendar" style="display:none">
           <div class="cal-nav">
             <button class="cal-nav-btn" onclick="calPrev()" aria-label="이전 달">&#8249;</button>
             <span class="cal-title" id="cal-title">2026년 7월</span>
             <button class="cal-nav-btn" onclick="calNext()" aria-label="다음 달">&#8250;</button>
           </div>
-          <div class="cal-grid" id="cal-grid">
-            <!-- JS로 채움 -->
-          </div>
+          <div class="cal-grid" id="cal-grid"></div>
         </div>
-
       </div>
     </aside>
 
-    <!-- 메인 콘텐츠 -->
     <main class="content-area" id="content-area">
-
-      <!-- 탭 헤더 -->
       <div class="tab-header" id="tab-header">
         <div class="tab-meta" id="content-meta">날짜를 선택하세요</div>
         <div class="tabs">
@@ -113,7 +99,6 @@
         </div>
       </div>
 
-      <!-- 콘텐츠 패널 -->
       <div class="content-panels">
         <div class="panel active" id="panel-bonmun">
           <div class="empty-state" id="empty-bonmun">
@@ -133,9 +118,9 @@
     </main>
   </div>
 
-  <!-- 토스트 알림 -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="/static/app.js"></script>
+  <!-- Pages 환경: app-pages.js / 로컬 서버: app.js -->
+  <script src="/static/app-pages.js"></script>
 </body>
 </html>
