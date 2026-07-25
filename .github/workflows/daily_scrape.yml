@@ -62,6 +62,10 @@ jobs:
       - name: Build static pages (전체 누적 빌드)
         run: python build_pages.py
 
+      - name: Add .nojekyll
+        run: touch ./_pages_build/.nojekyll
+
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
