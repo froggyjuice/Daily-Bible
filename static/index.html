@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>매일성경</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <meta name="description" content="성서유니온 매일성경 본문 & 해설 자동 스크랩 대시보드" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ── 헤더 ── -->
+  <header class="header" id="app-header">
+
+    <!-- 사이드바 토글 -->
+    <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="사이드바 접기/펼치기">&#8249;</button>
+
+    <div class="header-brand">
+      <span class="header-cross">✝</span>
+      <div>
+        <h1 class="header-title">매일성경</h1>
+        <p class="header-sub">Daily Bible Dashboard</p>
+      </div>
+    </div>
+
+    <div class="header-meta">
+      <div class="schedule-badge" id="schedule-badge">
+        <span class="schedule-icon">🕔</span>
+        <span id="next-run-label">스케줄 로딩 중…</span>
+      </div>
+      <div class="status-dot-wrap">
+        <span class="status-dot" id="status-dot"></span>
+        <span class="status-label" id="status-label">대기중</span>
+      </div>
+    </div>
+
+    <!-- 테마 토글 -->
+    <div class="theme-toggle-group" id="theme-group" role="group" aria-label="화면 테마 선택">
+      <button class="theme-btn" id="theme-btn-dark"   onclick="setTheme('dark')"   title="다크 모드">🌙</button>
+      <button class="theme-btn" id="theme-btn-light"  onclick="setTheme('light')"  title="라이트 모드">☀️</button>
+      <button class="theme-btn" id="theme-btn-system" onclick="setTheme('system')" title="시스템 설정">⚙</button>
+    </div>
+
+    <button class="btn-scrape" id="btn-scrape" onclick="triggerScrape()">
+      <span class="btn-scrape-icon" id="scrape-icon">⟳</span>
+      <span id="scrape-label">지금 스크랩</span>
+    </button>
+  </header>
+
+  <!-- ── 메인 레이아웃 ── -->
+  <div class="layout">
+
+    <!-- 사이드바 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-inner">
+
+        <!-- 사이드바 헤더 -->
+        <div class="sidebar-header">
+          <span class="sidebar-title">📅 스크랩 기록</span>
+          <div class="sidebar-header-right">
+            <span class="sidebar-count" id="total-count">0건</span>
+            <!-- 뷰 전환 버튼 -->
+            <div class="view-toggle-group" role="group" aria-label="보기 방식">
+              <button class="view-btn active" id="view-btn-list"     onclick="switchView('list')"     title="목록">☰</button>
+              <button class="view-btn"        id="view-btn-calendar" onclick="switchView('calendar')" title="캘린더">▦</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 목록 뷰 -->
+        <div id="view-list">
+          <ul class="date-list" id="date-list">
+            <li class="date-item loading-placeholder">로딩 중…</li>
+          </ul>
+        </div>
+
+        <!-- 캘린더 뷰 -->
+        <div id="view-calendar" style="display:none">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="calPrev()" aria-label="이전 달">&#8249;</button>
+            <span class="cal-title" id="cal-title">2026년 7월</span>
+            <button class="cal-nav-btn" onclick="calNext()" aria-label="다음 달">&#8250;</button>
+          </div>
+          <div class="cal-grid" id="cal-grid">
+            <!-- JS로 채움 -->
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- 메인 콘텐츠 -->
+    <main class="content-area" id="content-area">
+
+      <!-- 탭 헤더 -->
+      <div class="tab-header" id="tab-header">
+        <div class="tab-meta" id="content-meta">날짜를 선택하세요</div>
+        <div class="tabs">
+          <button class="tab-btn active" id="tab-bonmun"  onclick="switchTab('bonmun')">📖 본문</button>
+          <button class="tab-btn"        id="tab-haeseol" onclick="switchTab('haeseol')">📝 해설</button>
+        </div>
+      </div>
+
+      <!-- 콘텐츠 패널 -->
+      <div class="content-panels">
+        <div class="panel active" id="panel-bonmun">
+          <div class="empty-state" id="empty-bonmun">
+            <div class="empty-icon">📖</div>
+            <p>좌측에서 날짜를 선택하세요</p>
+          </div>
+          <div class="markdown-body" id="bonmun-body"></div>
+        </div>
+        <div class="panel" id="panel-haeseol">
+          <div class="empty-state" id="empty-haeseol">
+            <div class="empty-icon">📝</div>
+            <p>좌측에서 날짜를 선택하세요</p>
+          </div>
+          <div class="markdown-body" id="haeseol-body"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 토스트 알림 -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
