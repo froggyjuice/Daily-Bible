@@ -140,8 +140,14 @@ async def main():
         page = await context.new_page()
 
         print(f"[접속] {URL}")
-        await page.goto(URL, wait_until="networkidle", timeout=30000)
-        await page.wait_for_timeout(1000)
+        try:
+            await page.goto(URL, wait_until="domcontentloaded", timeout=60000)
+        except Exception as err:
+            print(f"[경고] page.goto 로딩 지연: {err}")
+        
+        await page.wait_for_selector("#mainView_2", timeout=15000)
+        await page.wait_for_timeout(1500)
+
 
         # 1. 매일성경 (QT1)
         print("[추출] 매일성경(QT1) 본문 & 해설...")
