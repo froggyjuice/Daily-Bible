@@ -28,16 +28,12 @@ async function switchVersion(ver) {
 
   document.getElementById('version-btn-main')?.classList.toggle('active', ver === 'main');
   document.getElementById('version-btn-soon')?.classList.toggle('active', ver === 'soon');
-  
-  const titleText = document.getElementById('header-title-text');
-  if (titleText) {
-    titleText.textContent = ver === 'main' ? '매일성경' : '매일성경 순';
-  }
 
   clearPanels();
   document.getElementById('content-meta').textContent = '날짜를 선택하세요';
   await loadEntries();
 }
+
 
 
 // ═══════════════════════════════════════════
@@ -225,9 +221,7 @@ async function selectDate(dateStr) {
 
   currentDate = dateStr;
   clearPanels();
-  const verLabel = currentVersion === 'main' ? '매일성경' : '매일성경 순';
-  document.getElementById('content-meta').textContent =
-    `[${verLabel}] ${dateStr} · ${formatDateKo(dateStr)}`;
+  document.getElementById('content-meta').textContent = formatDateKo(dateStr);
 
   if (currentView === 'calendar') renderCalendar(calYear, calMonth);
 
