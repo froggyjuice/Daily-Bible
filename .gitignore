@@ -1,3 +1,6 @@
+# GitHub Pages 임시 빌드
+_pages_build/
+
 # Python
 __pycache__/
 *.pyc
