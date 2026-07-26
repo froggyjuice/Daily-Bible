@@ -121,8 +121,8 @@ function restoreUI() {
   const isMobile = window.innerWidth <= 768;
   const savedState = localStorage.getItem('sidebarCollapsed');
   
-  // 모바일 환경이거나, 사용자가 이전에 닫아둔 경우
-  if (savedState === '1' || (isMobile && savedState === null)) {
+  // 사용자가 이전에 닫아둔 경우, 또는 첫 접근(기본값)인 경우
+  if (savedState === '1' || savedState === null) {
     sidebarCollapsed = true;
     document.getElementById('sidebar').classList.add('collapsed');
     document.getElementById('sidebar-toggle-btn').classList.add('sidebar-collapsed');

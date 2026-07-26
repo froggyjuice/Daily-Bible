@@ -160,6 +160,12 @@ html, body {
   font-family: inherit;
   white-space: nowrap;
 }
+.version-btn:not(.active) {
+  padding: 5px 9px;
+}
+.version-btn:not(.active) .version-text {
+  display: none;
+}
 .version-btn:hover {
   color: var(--text);
 }
