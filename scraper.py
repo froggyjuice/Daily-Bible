@@ -1,17 +1,18 @@
 """
 매일성경 (sum.su.or.kr) 본문 & 해설 자동 스크래퍼
 - 매일성경(QT1) 및 매일성경 순(QT6) 모두 스크랩합니다.
-- 결과는 output/main/ 및 output/soon/ 폴더에 날짜별 마크다운 파일로 저장됩니다.
+- 결과는 data/main/ 및 data/soon/ 폴더에 날짜별 JSON 파일로 저장됩니다.
 """
 
 import asyncio
+import json
 from datetime import datetime
 from pathlib import Path
 
 from playwright.async_api import async_playwright
 
 URL = "https://sum.su.or.kr:8888/bible/today"
-OUTPUT_DIR = Path(__file__).parent / "output"
+DATA_DIR = Path(__file__).parent / "data"
 
 
 async def get_bonmun(page) -> str:
@@ -79,25 +80,11 @@ async def get_haeseol(page) -> str:
     return "\n".join(lines)
 
 
-def migrate_legacy_files():
-    """기존 output/*.md 파일들을 output/main/으로 이동"""
-    main_dir = OUTPUT_DIR / "main"
-    main_dir.mkdir(parents=True, exist_ok=True)
-    (OUTPUT_DIR / "soon").mkdir(parents=True, exist_ok=True)
-
-    for file in OUTPUT_DIR.glob("*.md"):
-        if file.is_file():
-            target = main_dir / file.name
-            if not target.exists():
-                file.rename(target)
-                print(f"[마이그레이션] {file.name} -> {target}")
-
-
-def save_output(date_str: str, bonmun: str, haeseol: str, version_type: str = "main"):
-    target_dir = OUTPUT_DIR / version_type
+def save_json(date_str: str, bonmun: str, haeseol: str, version_type: str = "main"):
+    """data/{version_type}/{date}.json 저장"""
+    target_dir = DATA_DIR / version_type
     target_dir.mkdir(parents=True, exist_ok=True)
-    filename = target_dir / f"{date_str}.md"
-    
+
     title_prefix = "매일성경" if version_type == "main" else "매일성경 순"
     content = f"""# {title_prefix} - {date_str}
 
@@ -116,13 +103,44 @@ def save_output(date_str: str, bonmun: str, haeseol: str, version_type: str = "m
 
 > *해설의 저작권은 성서유니온에 있습니다.*
 """
-    filename.write_text(content, encoding="utf-8")
-    print(f"[{title_prefix} 저장 완료] {filename}")
-    return filename
+
+    data = {"date": date_str, "type": version_type, "content": content}
+    filepath = target_dir / f"{date_str}.json"
+    filepath.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print(f"[{title_prefix} 저장 완료] {filepath}")
+    return filepath
+
+
+def update_entries(date_str: str, version_type: str = "main"):
+    """data/{version_type}/entries.json에 날짜를 누적 추가 (내림차순)"""
+    target_dir = DATA_DIR / version_type
+    target_dir.mkdir(parents=True, exist_ok=True)
+    entries_path = target_dir / "entries.json"
+
+    # 기존 목록 로드
+    entries: list[str] = []
+    if entries_path.exists():
+        try:
+            entries = json.loads(entries_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, ValueError):
+            entries = []
+
+    # 중복 방지 후 내림차순 정렬
+    if date_str not in entries:
+        entries.append(date_str)
+    entries.sort(reverse=True)
+
+    entries_path.write_text(
+        json.dumps(entries, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    print(f"[entries 업데이트] {entries_path} ({len(entries)}건)")
 
 
 async def main():
-    migrate_legacy_files()
     date_str = datetime.now().strftime("%Y-%m-%d")
     print(f"[시작] {date_str} 매일성경 & 매일성경 순 스크랩 중...")
 
@@ -144,16 +162,16 @@ async def main():
             await page.goto(URL, wait_until="domcontentloaded", timeout=60000)
         except Exception as err:
             print(f"[경고] page.goto 로딩 지연: {err}")
-        
+
         await page.wait_for_selector("#mainView_2", timeout=15000)
         await page.wait_for_timeout(1500)
-
 
         # 1. 매일성경 (QT1)
         print("[추출] 매일성경(QT1) 본문 & 해설...")
         bonmun_main = await get_bonmun(page)
         haeseol_main = await get_haeseol(page)
-        save_output(date_str, bonmun_main, haeseol_main, "main")
+        save_json(date_str, bonmun_main, haeseol_main, "main")
+        update_entries(date_str, "main")
 
         # 2. 매일성경 순 (QT6)
         print("[전환] 매일성경 순(QT6) 선택 중...")
@@ -169,7 +187,8 @@ async def main():
         print("[추출] 매일성경 순(QT6) 본문 & 해설...")
         bonmun_soon = await get_bonmun(page)
         haeseol_soon = await get_haeseol(page)
-        save_output(date_str, bonmun_soon, haeseol_soon, "soon")
+        save_json(date_str, bonmun_soon, haeseol_soon, "soon")
+        update_entries(date_str, "soon")
 
         await browser.close()
 
