@@ -2,7 +2,7 @@ name: Daily Bible Scrape
 
 on:
   schedule:
-    - cron: '0 15 * * *'    # UTC 15:00 = KST 00:00 (자정)
+    - cron: '6 16 * * *'    # 임시 테스트용 스케줄 (KST 01:06)
   workflow_dispatch:         # 수동 실행 지원
 
 permissions:
