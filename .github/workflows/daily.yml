@@ -2,7 +2,7 @@ name: Daily Bible Scrape
 
 on:
   schedule:
-    - cron: '0 20 * * *'    # UTC 20:00 = KST 05:00 (다음 날)
+    - cron: '0 15 * * *'    # UTC 15:00 = KST 00:00 (자정)
   workflow_dispatch:         # 수동 실행 지원
 
 permissions:
@@ -29,18 +29,35 @@ jobs:
           playwright install chromium
           playwright install-deps chromium
 
-      - name: Run scraper
-        run: python scraper.py
-
-      - name: Commit and push data
+      - name: Run scraper with retry
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/
-          if git diff --cached --quiet; then
-            echo "No changes to commit — data already up to date."
-          else
-            DATE=$(date -u -d '+9 hours' +%Y-%m-%d)
-            git commit -m "data: ${DATE} 매일성경 업데이트"
-            git push
+          
+          MAX_RETRIES=60
+          RETRY_COUNT=0
+          SUCCESS=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "실행 시도: $((RETRY_COUNT + 1))/$MAX_RETRIES"
+            python scraper.py
+            
+            git add data/
+            if git diff --cached --quiet; then
+              echo "변경된 데이터가 없습니다 (정상 실행 실패 또는 아직 데이터가 갱신되지 않음). 1분 후 재시도합니다..."
+              sleep 60
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            else
+              echo "데이터 추가(변경) 확인됨! 커밋 및 푸시를 진행합니다."
+              DATE=$(date -u -d '+9 hours' +%Y-%m-%d)
+              git commit -m "data: ${DATE} 매일성경 업데이트"
+              git push
+              SUCCESS=1
+              break
+            fi
+          done
+          
+          if [ $SUCCESS -eq 0 ]; then
+            echo "최대 재시도 횟수에 도달했습니다."
+            exit 1
           fi
