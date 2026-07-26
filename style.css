@@ -260,6 +260,7 @@ html, body {
 .layout {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   padding-top: var(--header-h);
 }
 
@@ -617,10 +618,67 @@ html, body {
 @keyframes slideIn  { from{opacity:0;transform:translateX(36px)} to{opacity:1;transform:translateX(0)} }
 @keyframes slideOut { from{opacity:1;transform:translateX(0)}    to{opacity:0;transform:translateX(36px)} }
 
-/* ── 반응형 ────────────────────────────────── */
-@media (max-width: 680px) {
-  :root { --sidebar-w: 200px; }
-  .panel { padding: 18px 16px 30px; }
+/* ── 모바일 및 태블릿 백드롭 ────────────────── */
+.sidebar-backdrop {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 40;
+  opacity: 0;
+  transition: opacity .28s ease;
+}
+.sidebar-backdrop.active {
+  opacity: 1;
+}
+
+/* ── 반응형 (모바일 및 태블릿 최적화) ───────── */
+@media (max-width: 768px) {
+  :root { --sidebar-w: 280px; }
+  
+  .layout { position: relative; }
+  
+  /* 모바일 사이드바 오버레이 모드 */
+  .sidebar {
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    height: 100%;
+    z-index: 50;
+    transform: translateX(0);
+    box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+  }
+  
+  /* 사이드바가 접혔을 때 모바일에서는 너비 0이 아니라 밖으로 이동 */
+  .sidebar.collapsed {
+    width: var(--sidebar-w);
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
+  
+  .panel { padding: 16px 16px 40px; }
   .header { padding: 0 10px 0 6px; gap: 8px; }
   .schedule-badge, .header-sub { display: none; }
+  
+  .version-btn { padding: 5px 8px; font-size: 0.75rem; }
+  
+  .markdown-body h1 { font-size: 1.25rem; }
+  .markdown-body h2 { font-size: 1.05rem; }
+}
+
+/* ── 가로 모드 (자동 가로 렌더링 최적화) ────── */
+@media (orientation: landscape) and (max-height: 600px) {
+  :root { --header-h: 50px; }
+  .header-brand h1 { font-size: 1rem; }
+  .panel { padding: 12px 24px 20px; }
+  
+  /* 가로 모드일 때 콘텐츠 영역을 넓게 사용 */
+  .content-area {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* 헤더 슬림화 */
+  .header-cross { font-size: 16px; }
+  .version-btn { font-size: 0.75rem; padding: 4px 10px; }
 }
