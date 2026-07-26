@@ -6,7 +6,9 @@
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+KST = timezone(timedelta(hours=9))
 from pathlib import Path
 
 from playwright.async_api import async_playwright
@@ -89,7 +91,7 @@ def save_json(date_str: str, bonmun: str, haeseol: str, version_type: str = "mai
     content = f"""# {title_prefix} - {date_str}
 
 > 출처: {URL}
-> 수집 시각: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+> 수집 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)
 
 ---
 
@@ -141,7 +143,7 @@ def update_entries(date_str: str, version_type: str = "main"):
 
 
 async def main():
-    date_str = datetime.now().strftime("%Y-%m-%d")
+    date_str = datetime.now(KST).strftime("%Y-%m-%d")
     print(f"[시작] {date_str} 매일성경 & 매일성경 순 스크랩 중...")
 
     async with async_playwright() as p:
