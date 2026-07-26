@@ -8,9 +8,10 @@ let currentVersion = 'main';          // 'main' | 'soon'
 let currentDate    = null;
 let currentTab     = 'bonmun';
 
-// 캘린더 상태
-let calYear  = new Date().getFullYear();
-let calMonth = new Date().getMonth();
+// 캘린더 상태 (KST 기준)
+const _kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+let calYear  = _kstNow.getUTCFullYear();
+let calMonth = _kstNow.getUTCMonth();
 const entrySet = new Set();
 
 // 사이드바 / 뷰 상태
