@@ -101,17 +101,59 @@ function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('collapsed', sidebarCollapsed);
   document.getElementById('sidebar-toggle-btn').classList.toggle('sidebar-collapsed', sidebarCollapsed);
   localStorage.setItem('sidebarCollapsed', sidebarCollapsed ? '1' : '0');
+  
+  // 모바일 백드롭 처리
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (backdrop && window.innerWidth <= 768) {
+    if (!sidebarCollapsed) {
+      backdrop.style.display = 'block';
+      setTimeout(() => backdrop.classList.add('active'), 10);
+    } else {
+      backdrop.classList.remove('active');
+      setTimeout(() => {
+        if (sidebarCollapsed) backdrop.style.display = 'none';
+      }, 280);
+    }
+  }
 }
 
 function restoreUI() {
-  if (localStorage.getItem('sidebarCollapsed') === '1') {
+  const isMobile = window.innerWidth <= 768;
+  const savedState = localStorage.getItem('sidebarCollapsed');
+  
+  // 모바일 환경이거나, 사용자가 이전에 닫아둔 경우
+  if (savedState === '1' || (isMobile && savedState === null)) {
     sidebarCollapsed = true;
     document.getElementById('sidebar').classList.add('collapsed');
     document.getElementById('sidebar-toggle-btn').classList.add('sidebar-collapsed');
+  } else {
+    sidebarCollapsed = false;
   }
+  
+  // 초기 모바일 백드롭 렌더링
+  if (isMobile && !sidebarCollapsed) {
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (backdrop) {
+      backdrop.style.display = 'block';
+      backdrop.classList.add('active');
+    }
+  }
+
   const savedView = localStorage.getItem('sidebarView') || 'list';
   if (savedView === 'calendar') switchView('calendar', false);
 }
+
+// 윈도우 리사이즈 시 백드롭 정리
+window.addEventListener('resize', () => {
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (window.innerWidth > 768 && backdrop) {
+    backdrop.style.display = 'none';
+    backdrop.classList.remove('active');
+  } else if (window.innerWidth <= 768 && !sidebarCollapsed && backdrop) {
+    backdrop.style.display = 'block';
+    backdrop.classList.add('active');
+  }
+});
 
 
 // ═══════════════════════════════════════════
@@ -222,6 +264,11 @@ async function selectDate(dateStr) {
   currentDate = dateStr;
   clearPanels();
   document.getElementById('content-meta').textContent = formatDateKo(dateStr);
+
+  // 모바일에서는 날짜 선택 시 가로 렌더링 최적화를 위해 사이드바 자동 닫기
+  if (window.innerWidth <= 768 && !sidebarCollapsed) {
+    toggleSidebar();
+  }
 
   if (currentView === 'calendar') renderCalendar(calYear, calMonth);
 
