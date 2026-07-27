@@ -371,6 +371,21 @@ function renderCalendar(year, month) {
   grid.innerHTML = html;
 }
 
+function goToToday() {
+  const today = todayKST();
+  const [y, m] = today.split('-').map(Number);
+  calYear = y;
+  calMonth = m - 1;
+  if (currentView === 'calendar') renderCalendar(calYear, calMonth);
+
+  if (currentDate === today) return;
+  if (!entrySet.has(today)) {
+    showToast('오늘 데이터가 아직 없습니다.', 'info');
+    return;
+  }
+  selectDate(today);
+}
+
 function calPrev() {
   calMonth--;
   if (calMonth < 0) { calMonth = 11; calYear--; }
