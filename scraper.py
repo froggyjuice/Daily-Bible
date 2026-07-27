@@ -146,6 +146,8 @@ async def main():
     date_str = datetime.now(KST).strftime("%Y-%m-%d")
     print(f"[시작] {date_str} 매일성경 & 매일성경 순 스크랩 중...")
 
+    NAV_RETRIES = 3
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -159,14 +161,43 @@ async def main():
         )
         page = await context.new_page()
 
-        print(f"[접속] {URL}")
-        try:
-            await page.goto(URL, wait_until="domcontentloaded", timeout=60000)
-        except Exception as err:
-            print(f"[경고] page.goto 로딩 지연: {err}")
+        # ── 페이지 접속 + 셀렉터 대기를 함께 재시도 ──
+        loaded = False
+        for attempt in range(1, NAV_RETRIES + 1):
+            goto_timeout = 60000 + (attempt - 1) * 30000   # 60s → 90s → 120s
+            selector_timeout = 30000 + (attempt - 1) * 15000  # 30s → 45s → 60s
 
-        await page.wait_for_selector("#mainView_2", timeout=15000)
-        await page.wait_for_timeout(1500)
+            print(f"[접속 시도 {attempt}/{NAV_RETRIES}] {URL} "
+                  f"(goto={goto_timeout // 1000}s, selector={selector_timeout // 1000}s)")
+            try:
+                await page.goto(URL, wait_until="domcontentloaded", timeout=goto_timeout)
+            except Exception as err:
+                print(f"[경고] page.goto 실패: {err}")
+                if attempt < NAV_RETRIES:
+                    wait_sec = 10 * attempt
+                    print(f"[대기] {wait_sec}초 후 재시도...")
+                    await page.wait_for_timeout(wait_sec * 1000)
+                continue  # goto 실패 시 selector 대기 없이 바로 재시도
+
+            try:
+                await page.wait_for_selector("#mainView_2", timeout=selector_timeout)
+                loaded = True
+                print("[접속 성공] 페이지 로드 완료")
+                break
+            except Exception as err:
+                print(f"[경고] 셀렉터 대기 실패: {err}")
+                if attempt < NAV_RETRIES:
+                    wait_sec = 10 * attempt
+                    print(f"[대기] {wait_sec}초 후 재시도...")
+                    await page.wait_for_timeout(wait_sec * 1000)
+
+        if not loaded:
+            await browser.close()
+            raise RuntimeError(
+                f"[실패] {NAV_RETRIES}회 시도 후에도 페이지 로드 불가: {URL}"
+            )
+
+        await page.wait_for_timeout(2000)
 
         # 1. 매일성경 (QT1)
         print("[추출] 매일성경(QT1) 본문 & 해설...")
