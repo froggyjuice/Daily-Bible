@@ -45,17 +45,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   initTheme();
   restoreUI();
-  hideServerOnlyElements();
   await loadEntries();
 });
-
-/** 서버 전용 UI 요소 숨김 */
-function hideServerOnlyElements() {
-  ['schedule-badge', 'status-dot-wrap', 'btn-scrape'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
 
 
 // ═══════════════════════════════════════════
