@@ -4,6 +4,8 @@
 # - 같은 날 여러 번 로그온해도 중복 실행/커밋되지 않도록 오늘자 파일 존재 여부를 먼저 확인합니다.
 # - git 네이티브 명령은 stderr에 정상 진행 메시지를 씀 -> $ErrorActionPreference/2>&1 조합으로
 #   오탐하지 않도록 $LASTEXITCODE만으로 성공 여부를 판단합니다.
+# - daily.yml(GitHub Actions cron)이 가끔 성공해서 원격을 먼저 앞서갈 수 있으므로,
+#   스크랩 여부를 판단하기 전에 항상 먼저 pull 해서 로컬을 원격과 맞춥니다.
 
 $RepoDir = "C:\dev\QT\bible_scraper"
 $Python  = "C:\Users\user\anaconda3\python.exe"
@@ -18,6 +20,9 @@ function Log($msg) {
 
 Set-Location $RepoDir
 Log "===== 자동 스크랩 시작 ====="
+
+git pull --rebase origin main *> $null
+Log "git pull exit code: $LASTEXITCODE"
 
 $todayKst = & $Python -c "from datetime import datetime, timezone, timedelta; print(datetime.now(timezone(timedelta(hours=9))).strftime('%Y-%m-%d'))"
 Log "오늘(KST): $todayKst"
@@ -66,7 +71,16 @@ $pushExit = $LASTEXITCODE
 Log "git push exit code: $pushExit"
 
 if ($pushExit -ne 0) {
-    Log "git push 실패"
+    Log "git push 실패 - pull --rebase 후 1회 재시도"
+    git pull --rebase origin main *> $null
+    Log "재시도 전 git pull exit code: $LASTEXITCODE"
+    git push origin main *> $null
+    $pushExit = $LASTEXITCODE
+    Log "재시도 git push exit code: $pushExit"
+}
+
+if ($pushExit -ne 0) {
+    Log "git push 최종 실패 - 수동 확인 필요 (충돌 가능성)"
     exit 1
 }
 
