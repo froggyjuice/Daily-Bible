@@ -377,6 +377,41 @@ function goToToday() {
   selectDate(today);
 }
 
+async function refreshData() {
+  const btn = document.getElementById('btn-refresh');
+  btn.classList.add('spinning');
+  try {
+    let entries;
+    try {
+      entries = await staticFetch(`./data/${currentVersion}/entries.json`, true);
+    } catch (_) {
+      entries = await staticFetch('./data/entries.json', true);
+    }
+
+    entrySet.clear();
+    entries.forEach(d => entrySet.add(d));
+    renderSidebar(entries);
+
+    if (currentDate && entrySet.has(currentDate)) {
+      let data;
+      try {
+        data = await staticFetch(`./data/${currentVersion}/${currentDate}.json`, true);
+      } catch (_) {
+        data = await staticFetch(`./data/${currentDate}.json`, true);
+      }
+      parseAndRender(data.content);
+    } else if (!currentDate && entries.length > 0) {
+      await selectDate(entries[0]);
+    }
+
+    showToast('새로고침 완료', 'success');
+  } catch (e) {
+    showToast('새로고침 실패: ' + e.message, 'error');
+  } finally {
+    btn.classList.remove('spinning');
+  }
+}
+
 function calPrev() {
   calMonth--;
   if (calMonth < 0) { calMonth = 11; calYear--; }
@@ -393,8 +428,10 @@ function calNext() {
 // ═══════════════════════════════════════════
 //  유틸리티
 // ═══════════════════════════════════════════
-async function staticFetch(url) {
-  const res = await fetch(url);
+async function staticFetch(url, bustCache = false) {
+  // bustCache: 쿼리스트링으로 새 URL을 만들어 CDN 엣지 캐시(Cache-Control: max-age=600)까지 우회
+  const fetchUrl = bustCache ? `${url}?_=${Date.now()}` : url;
+  const res = await fetch(fetchUrl, bustCache ? { cache: 'no-store' } : undefined);
   if (!res.ok) throw new Error(`${url} - ${res.status} ${res.statusText}`);
   return res.json();
 }
