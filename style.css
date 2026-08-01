@@ -475,7 +475,7 @@ html, body {
   font-family: 'Noto Serif KR', serif;
 }
 
-.tabs { display: flex; gap: 4px; }
+.tabs { display: flex; align-items: center; gap: 4px; }
 
 .tab-btn {
   background: none; border: none;
