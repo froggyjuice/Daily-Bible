@@ -372,13 +372,6 @@ html, body {
 .date-item-sub    { font-size: .7rem; color: var(--text-3); }
 .date-item.active .date-item-sub   { color: var(--gold-dim); }
 
-.date-item-badge {
-  font-size: .6rem; background: var(--gold);
-  color: #0a0d14; font-weight: 700;
-  border-radius: 4px; padding: 1px 5px;
-  align-self: flex-start;
-}
-
 .loading-placeholder {
   color: var(--text-3); font-size: .8rem;
   text-align: center; padding: 24px 14px;

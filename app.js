@@ -213,9 +213,7 @@ async function loadEntries() {
 //  사이드바 목록 렌더링
 // ═══════════════════════════════════════════
 function renderSidebar(entries) {
-  const list  = document.getElementById('date-list');
-  const count = document.getElementById('total-count');
-  count.textContent = `${entries.length}건`;
+  const list = document.getElementById('date-list');
 
   if (entries.length === 0) {
     list.innerHTML = `<li class="date-item loading-placeholder">데이터가 없습니다</li>`;
@@ -226,14 +224,12 @@ function renderSidebar(entries) {
   const yesterday = offsetDate(today, -1);
 
   list.innerHTML = entries.map(dateStr => {
-    let badge = '';
-    let sub   = formatDateKo(dateStr);
-    if (dateStr === today)     badge = `<span class="date-item-badge">오늘</span>`;
-    if (dateStr === yesterday) sub   = '어제';
+    let sub = formatDateKo(dateStr);
+    if (dateStr === today)          sub = '오늘';
+    else if (dateStr === yesterday) sub = '어제';
 
     return `
       <li class="date-item" id="item-${dateStr}" onclick="selectDate('${dateStr}')">
-        ${badge}
         <span class="date-item-label">${dateStr}</span>
         <span class="date-item-sub">${sub}</span>
       </li>`;
