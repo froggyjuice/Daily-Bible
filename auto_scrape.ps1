@@ -3,11 +3,15 @@
 # - 이 PC가 유일한 스크랩 경로입니다(GitHub Actions cron은 제거됨 - 이미 한국 IP인
 #   로컬과 달리 러너별로 간헐적으로 차단됐고, 로컬 자동화와 겹쳐 같은 날짜를 다시
 #   스크랩/푸시하면서 git push 충돌을 낸 적이 있음). IP 차단 재시도 로직은 불필요.
-# - 같은 날 여러 번 로그온해도 중복 실행/커밋되지 않도록 오늘자 파일 존재 여부를 먼저 확인합니다.
+# - 같은 날 여러 번 로그온해도 오늘자 스크랩이 중복 실행되지 않도록 오늘자 파일
+#   존재 여부를 먼저 확인합니다(단, 갭 채우기는 오늘자 존재 여부와 무관하게 매번 확인).
 # - git 네이티브 명령은 stderr에 정상 진행 메시지를 씀 -> $ErrorActionPreference/2>&1 조합으로
 #   오탐하지 않도록 $LASTEXITCODE만으로 성공 여부를 판단합니다.
 # - 로컬에서 다른 경로(수동 실행 등)로 이미 커밋된 원격 변경이 있을 수 있으므로,
 #   스크랩 여부를 판단하기 전에 항상 먼저 pull 해서 로컬을 원격과 맞춥니다.
+# - 웹사이트의 "새로고침" 버튼은 정적 사이트라 실제 스크랩을 트리거할 수 없으므로
+#   (백엔드 없음), 대신 로그온마다 여기서 backfill.py --gaps로 그 사이 놓친
+#   과거 날짜가 있는지 항상 확인해서 채웁니다.
 
 $RepoDir = "C:\dev\QT\bible_scraper"
 $Python  = "C:\Users\user\anaconda3\python.exe"
@@ -31,30 +35,32 @@ Log "오늘(KST): $todayKst"
 
 $todayFile = Join-Path $RepoDir "data\main\$todayKst.json"
 if (Test-Path $todayFile) {
-    Log "오늘자 데이터가 이미 있습니다. 스크랩 생략."
-    exit 0
+    Log "오늘자 데이터가 이미 있습니다. 오늘자 스크랩 생략."
+} else {
+    $maxAttempts = 2
+    $success = $false
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        Log "scraper.py 실행 시도 $attempt/$maxAttempts"
+        $output = & $Python (Join-Path $RepoDir "scraper.py") 2>&1
+        $output | ForEach-Object { Log "  $_" }
+        if ($LASTEXITCODE -eq 0) {
+            $success = $true
+            break
+        }
+        Log "scraper.py 실패 (exit $LASTEXITCODE)"
+        if ($attempt -lt $maxAttempts) {
+            Start-Sleep -Seconds 30
+        }
+    }
+    if (-not $success) {
+        Log "오늘자 스크랩 최종 실패. 갭 채우기는 계속 진행합니다."
+    }
 }
 
-$maxAttempts = 2
-$success = $false
-for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-    Log "scraper.py 실행 시도 $attempt/$maxAttempts"
-    $output = & $Python (Join-Path $RepoDir "scraper.py") 2>&1
-    $output | ForEach-Object { Log "  $_" }
-    if ($LASTEXITCODE -eq 0) {
-        $success = $true
-        break
-    }
-    Log "scraper.py 실패 (exit $LASTEXITCODE)"
-    if ($attempt -lt $maxAttempts) {
-        Start-Sleep -Seconds 30
-    }
-}
-
-if (-not $success) {
-    Log "스크랩 최종 실패. 커밋/푸시 생략."
-    exit 1
-}
+Log "backfill.py --gaps 실행 (놓친 과거 날짜 확인)"
+$gapOutput = & $Python (Join-Path $RepoDir "backfill.py") --gaps 2>&1
+$gapOutput | ForEach-Object { Log "  $_" }
+Log "backfill.py --gaps exit code: $LASTEXITCODE"
 
 git add data/ *> $null
 Log "git add exit code: $LASTEXITCODE"
@@ -65,7 +71,7 @@ if ($LASTEXITCODE -eq 0) {
     exit 0
 }
 
-git commit -m "data: $todayKst 매일성경 업데이트 (local auto)" *> $null
+git commit -m "data: $todayKst 기준 자동 업데이트 (local auto)" *> $null
 Log "git commit exit code: $LASTEXITCODE"
 
 git push origin main *> $null
