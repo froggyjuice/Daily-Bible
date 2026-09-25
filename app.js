@@ -374,8 +374,81 @@ function goToToday() {
 }
 
 async function refreshData() {
+  const apiUrl = getApiUrl();
   const btn = document.getElementById('btn-refresh');
+
+  if (btn.classList.contains('spinning')) return;
   btn.classList.add('spinning');
+  showRefreshStatus('');
+
+  try {
+    if (apiUrl) {
+      await apiRefresh(apiUrl);
+    } else {
+      showToast('⚙️ API 서버 미설정 — CDN 캐시만 갱신합니다', 'info', 4000);
+    }
+    await cdnRefresh();
+  } finally {
+    btn.classList.remove('spinning');
+    hideRefreshStatus();
+  }
+}
+
+// ── API 기반 새로고침 ──
+async function apiRefresh(apiUrl) {
+  let startRes;
+  try {
+    startRes = await fetch(`${apiUrl}/api/refresh`, { method: 'POST' });
+  } catch (e) {
+    showToast('API 서버에 연결할 수 없습니다', 'error');
+    return;
+  }
+
+  if (startRes.status === 409) {
+    showToast('이미 실행 중 — 진행 상태를 확인합니다...', 'info');
+  } else if (!startRes.ok) {
+    showToast('새로고침 시작 실패', 'error');
+    return;
+  } else {
+    showToast('🔄 스크랩 시작됨...', 'info');
+  }
+
+  let lastIdx = 0;
+  const maxWait = 600, interval = 2;
+
+  for (let elapsed = 0; elapsed < maxWait; elapsed += interval) {
+    await new Promise(r => setTimeout(r, interval * 1000));
+    let status;
+    try {
+      const res = await fetch(`${apiUrl}/api/status`);
+      status = await res.json();
+    } catch { continue; }
+
+    if (status.progress && status.progress.length > lastIdx) {
+      showRefreshStatus(status.progress[status.progress.length - 1]);
+      lastIdx = status.progress.length;
+    }
+
+    if (!status.running && status.result) {
+      if (status.result.success) {
+        if (status.result.pushed) {
+          showToast('✅ 스크랩 완료! GitHub Pages 갱신 대기...', 'success', 5000);
+          showRefreshStatus('GitHub Pages 빌드 대기 중...');
+          await new Promise(r => setTimeout(r, 15000));
+        } else {
+          showToast('✅ 누락 데이터 없음 — 최신 상태', 'success');
+        }
+      } else {
+        showToast('❌ 스크랩 실패: ' + (status.result.error || ''), 'error');
+      }
+      return;
+    }
+  }
+  showToast('⏰ 시간 초과 — 서버에서 계속 실행 중일 수 있습니다', 'info');
+}
+
+// ── CDN 캐시 우회 데이터 갱신 ──
+async function cdnRefresh() {
   try {
     let entries;
     try {
@@ -400,12 +473,73 @@ async function refreshData() {
       await selectDate(entries[0]);
     }
 
-    showToast('새로고침 완료', 'success');
+    if (entries.length > 0) {
+      const nextEl = document.getElementById('next-run-label');
+      if (nextEl) nextEl.textContent = `최종 업데이트: ${entries[0]}`;
+    }
+
+    showToast('데이터 갱신 완료', 'success');
   } catch (e) {
-    showToast('새로고침 실패: ' + e.message, 'error');
-  } finally {
-    btn.classList.remove('spinning');
+    showToast('데이터 갱신 실패: ' + e.message, 'error');
   }
+}
+
+// ── 새로고침 진행 상태 표시 ──
+function showRefreshStatus(msg) {
+  const el = document.getElementById('refresh-status');
+  if (!el) return;
+  if (msg) { el.textContent = msg; el.style.display = 'block'; }
+}
+function hideRefreshStatus() {
+  const el = document.getElementById('refresh-status');
+  if (el) { el.style.display = 'none'; el.textContent = ''; }
+}
+
+// ── API URL 관리 ──
+function getApiUrl() {
+  return localStorage.getItem('refreshApiUrl') || '';
+}
+function setApiUrl(url) {
+  localStorage.setItem('refreshApiUrl', url ? url.replace(/\/+$/, '') : '');
+}
+
+// ── 설정 모달 ──
+function openSettings() {
+  const modal = document.getElementById('settings-modal');
+  const backdrop = document.getElementById('settings-modal-backdrop');
+  document.getElementById('settings-api-url').value = getApiUrl();
+  document.getElementById('settings-test-result').textContent = '';
+  modal.style.display = 'flex';
+  backdrop.style.display = 'block';
+  setTimeout(() => { modal.classList.add('active'); backdrop.classList.add('active'); }, 10);
+}
+
+function closeSettings() {
+  const modal = document.getElementById('settings-modal');
+  const backdrop = document.getElementById('settings-modal-backdrop');
+  modal.classList.remove('active');
+  backdrop.classList.remove('active');
+  setTimeout(() => { modal.style.display = 'none'; backdrop.style.display = 'none'; }, 250);
+}
+
+function saveSettings() {
+  const url = document.getElementById('settings-api-url').value.trim();
+  setApiUrl(url);
+  showToast(url ? '✅ API 서버 URL 저장됨' : 'API 서버 URL 초기화됨', 'success');
+  closeSettings();
+}
+
+async function testApiConnection() {
+  const url = document.getElementById('settings-api-url').value.trim();
+  const el = document.getElementById('settings-test-result');
+  if (!url) { el.textContent = '❌ URL을 입력하세요'; el.className = 'settings-test-result error'; return; }
+  el.textContent = '🔄 연결 테스트 중...'; el.className = 'settings-test-result';
+  try {
+    const res = await fetch(`${url.replace(/\/+$/, '')}/api/ping`, { signal: AbortSignal.timeout(5000) });
+    const data = await res.json();
+    if (data.ok) { el.textContent = `✅ 연결 성공! (서버: ${data.time})`; el.className = 'settings-test-result success'; }
+    else { el.textContent = '❌ 응답 오류'; el.className = 'settings-test-result error'; }
+  } catch (e) { el.textContent = `❌ 연결 실패: ${e.message}`; el.className = 'settings-test-result error'; }
 }
 
 function calPrev() {

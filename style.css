@@ -682,3 +682,148 @@ html, body {
   .header-cross { font-size: 16px; }
   .version-btn { font-size: 0.75rem; padding: 4px 10px; }
 }
+
+/* ── 새로고침 진행 상태 바 ──────────────────── */
+.refresh-status {
+  padding: 6px 24px;
+  font-size: .72rem;
+  color: var(--gold);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-family: 'Noto Sans KR', sans-serif;
+  animation: fade 1.2s ease infinite alternate;
+  flex-shrink: 0;
+}
+
+/* ── 설정 모달 ─────────────────────────────── */
+.settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.settings-modal-backdrop.active { opacity: 1; }
+
+.settings-modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(.92);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 380px;
+  max-width: 90vw;
+  z-index: 201;
+  box-shadow: 0 16px 48px rgba(0,0,0,.5);
+  opacity: 0;
+  transition: opacity .25s ease, transform .25s ease;
+  flex-direction: column;
+}
+.settings-modal.active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.settings-modal-header h3 {
+  font-size: .92rem;
+  font-weight: 600;
+  color: var(--gold-light);
+}
+
+.settings-close-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .9rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: color .15s, border-color .15s;
+}
+.settings-close-btn:hover { color: var(--red); border-color: var(--red); }
+
+.settings-modal-body {
+  padding: 16px 20px 20px;
+}
+.settings-modal-body label {
+  display: block;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+
+.settings-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: .84rem;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  outline: none;
+  transition: border-color .2s;
+}
+.settings-input:focus { border-color: var(--gold); }
+.settings-input::placeholder { color: var(--text-3); }
+
+.settings-help {
+  font-size: .72rem;
+  color: var(--text-3);
+  margin: 8px 0 16px;
+  line-height: 1.6;
+}
+.settings-help code {
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: .72rem;
+  color: var(--gold);
+}
+
+.settings-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: .8rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.settings-btn:hover { background: var(--bg); border-color: var(--gold-dim); }
+.settings-btn.primary {
+  background: var(--gold);
+  color: #0a0d14;
+  border-color: var(--gold);
+  font-weight: 600;
+}
+.settings-btn.primary:hover { opacity: .9; }
+
+.settings-test-result {
+  margin-top: 12px;
+  font-size: .76rem;
+  color: var(--text-2);
+  min-height: 1.2em;
+}
+.settings-test-result.success { color: var(--green); }
+.settings-test-result.error { color: var(--red); }
