@@ -44,6 +44,33 @@ python backfill.py
 
 `data/main/entries.json` 기준 어제부터 과거로 하루씩 이동하며, 사이트가 지원하는 조회 범위를 벗어나면(연속 2회 실패) 자동 중단합니다.
 
+### 새로고침 API 서버 (핸드폰 원격 새로고침)
+
+대시보드의 🔄 새로고침 버튼에서 실제 스크랩을 트리거하려면 로컬 PC에서 API 서버를 실행합니다:
+
+```bash
+python refresh_server.py            # 기본 포트 5000
+python refresh_server.py --port 8080  # 포트 변경
+```
+
+**같은 Wi-Fi에서 핸드폰 접속**: 대시보드 ⚙️ 버튼 → `http://<PC내부IP>:5000` 입력
+
+**외부 네트워크(LTE 등)에서 접속**: [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) 사용
+
+```bash
+# 1회 설치: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+cloudflared tunnel --url http://localhost:5000
+# 출력되는 https://xxx.trycloudflare.com URL을 대시보드 ⚙️에 입력
+```
+
+API 엔드포인트:
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `POST` | `/api/refresh` | 스크랩 시작 (백그라운드) |
+| `GET` | `/api/status` | 진행 상태 조회 |
+| `GET` | `/api/gaps` | 누락 날짜 확인 |
+| `GET` | `/api/ping` | 연결 테스트 |
+
 ### 로컬 자동화 (Windows)
 
 `auto_scrape.ps1`이 로그온 시 오늘자 데이터를 확인하고, 없으면 스크랩 후 커밋·푸시합니다. 작업 스케줄러 등록 예시:
@@ -64,6 +91,7 @@ Register-ScheduledTask -TaskName "DailyBibleAutoScrape" -Action $action -Trigger
 bible_scraper/
 ├── scraper.py          # 오늘자 스크랩 (Playwright)
 ├── backfill.py          # 과거 날짜 소급 스크랩
+├── refresh_server.py    # 새로고침 API 서버 (핸드폰 원격 트리거용)
 ├── auto_scrape.ps1      # 로컬 자동화 진입점 (작업 스케줄러가 호출)
 ├── index.html            # 대시보드 정적 페이지
 ├── style.css              # 다크/라이트 테마 스타일
