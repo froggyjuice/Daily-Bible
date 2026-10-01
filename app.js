@@ -251,6 +251,7 @@ async function selectDate(dateStr) {
 
   currentDate = dateStr;
   clearPanels();
+  clearVerseSelection();
   document.getElementById('content-meta').textContent = formatDateKo(dateStr);
 
   // 모바일에서는 날짜 선택 시 가로 렌더링 최적화를 위해 사이드바 자동 닫기
@@ -278,6 +279,8 @@ async function selectDate(dateStr) {
 // ═══════════════════════════════════════════
 //  마크다운 파싱
 // ═══════════════════════════════════════════
+let currentBookInfo = null;  // { book: '사사기', chapter: '13' }
+
 function parseAndRender(raw) {
   const sections = raw.split(/\n---\n/);
   let bonmunMd = '', haeseolMd = '';
@@ -291,8 +294,25 @@ function parseAndRender(raw) {
   if (!bonmunMd  && sections.length >= 2) bonmunMd  = sections[1].trim();
   if (!haeseolMd && sections.length >= 3) haeseolMd = sections[2].trim();
 
+  // 본문 헤더에서 책 이름 · 장 · 절 정보 추출
+  currentBookInfo = extractBookInfo(bonmunMd);
+
   renderPanel('bonmun',  bonmunMd);
   renderPanel('haeseol', haeseolMd);
+}
+
+function extractBookInfo(md) {
+  // 제목 추출: **제목** 패턴 (## 본문 다음 줄)
+  const titleMatch = md.match(/\*\*([^*]+)\*\*/);
+  const title = titleMatch ? titleMatch[1].trim() : '';
+
+  // 패턴: 사사기(Judges)13:15 - 13:25  또는  창세기(Genesis)1:1 - 1:31
+  const m = md.match(/([가-힣]+(?:\s[가-힣]+)*)\([^)]+\)(\d+):(\d+)\s*-\s*\d*:?(\d+)/);
+  if (m) return { book: m[1], chapter: m[2], verseStart: m[3], verseEnd: m[4], title };
+  // 영문 없는 경우 폴백
+  const m2 = md.match(/본문\s*:\s*([가-힣]+(?:\s[가-힣]+)*)\s*(\d+):(\d+)\s*-\s*\d*:?(\d+)/);
+  if (m2) return { book: m2[1], chapter: m2[2], verseStart: m2[3], verseEnd: m2[4], title };
+  return null;
 }
 
 function renderPanel(tab, md) {
@@ -301,6 +321,167 @@ function renderPanel(tab, md) {
   if (!md) { empty.style.display = 'flex'; body.innerHTML = ''; return; }
   empty.style.display = 'none';
   body.innerHTML = marked.parse(md);
+
+  // <ol><li> → 커스텀 절 요소로 변환 (정확한 절 번호 표시)
+  convertOlToVerseElements(body);
+}
+
+// ═══════════════════════════════════════════
+//  절 번호 변환 + 클릭 복사 기능
+// ═══════════════════════════════════════════
+const selectedVerses = new Set();
+
+function convertOlToVerseElements(container) {
+  const olElements = container.querySelectorAll('ol');
+  olElements.forEach(ol => {
+    const startNum = parseInt(ol.getAttribute('start') || '1', 10);
+    const lis = [...ol.querySelectorAll(':scope > li')];
+    const wrapper = document.createElement('div');
+    wrapper.className = 'verse-group';
+
+    lis.forEach((li, idx) => {
+      const verseNum = startNum + idx;
+      const div = document.createElement('div');
+      div.className = 'verse-line';
+      div.dataset.verseNum = verseNum;
+      div.innerHTML = `<span class="verse-num">${verseNum}</span><span class="verse-text">${li.innerHTML}</span>`;
+      div.addEventListener('click', () => toggleVerseSelection(div));
+      wrapper.appendChild(div);
+    });
+
+    ol.replaceWith(wrapper);
+  });
+}
+
+// ── 절 선택 토글 ──
+function toggleVerseSelection(el) {
+  if (selectedVerses.has(el)) {
+    selectedVerses.delete(el);
+    el.classList.remove('verse-selected');
+  } else {
+    selectedVerses.add(el);
+    el.classList.add('verse-selected');
+  }
+  updateCopyBar();
+}
+
+// ── 플로팅 복사 바 ──
+function updateCopyBar() {
+  let bar = document.getElementById('verse-copy-bar');
+
+  if (selectedVerses.size === 0) {
+    if (bar) bar.classList.remove('active');
+    return;
+  }
+
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'verse-copy-bar';
+    bar.innerHTML = `
+      <span class="vcb-info"></span>
+      <div class="vcb-actions">
+        <button class="vcb-btn" onclick="copySelectedVerses()">📋 복사</button>
+        <button class="vcb-btn vcb-cancel" onclick="clearVerseSelection()">✕</button>
+      </div>`;
+    document.body.appendChild(bar);
+  }
+
+  const nums = [...selectedVerses]
+    .map(el => parseInt(el.dataset.verseNum))
+    .sort((a, b) => a - b);
+
+  const rangeLabel = buildRangeLabel(nums);
+  bar.querySelector('.vcb-info').textContent = `✝ ${rangeLabel} 선택됨`;
+  bar.classList.add('active');
+}
+
+// ── 범위 레이블 생성 (15-18절 / 15,17절 등) ──
+function buildRangeLabel(nums) {
+  if (nums.length === 1) return `${nums[0]}절`;
+  // 연속 범위인지 확인
+  const isContiguous = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
+  if (isContiguous) return `${nums[0]}-${nums[nums.length - 1]}절`;
+  return nums.join(', ') + '절';
+}
+
+// ── 복사 머리글 생성 (날짜 + 제목 + 성경 레퍼런스) ──
+function buildCopyHeader(nums) {
+  const lines = [];
+
+  // 1행: 날짜 + 제목  →  9/29 (화) "내 이름은 기묘자라"
+  if (currentDate) {
+    const d = new Date(currentDate + 'T00:00:00Z');
+    const days = ['일','월','화','수','목','금','토'];
+    const datePart = `${d.getUTCMonth() + 1}/${d.getUTCDate()} (${days[d.getUTCDay()]})`;
+    const titlePart = currentBookInfo?.title ? ` "${currentBookInfo.title}"` : '';
+    lines.push(datePart + titlePart);
+  }
+
+  // 2행: [사사기 13:15-16]
+  if (currentBookInfo) {
+    const { book, chapter } = currentBookInfo;
+    let ref;
+    if (nums.length === 1) {
+      ref = `${chapter}:${nums[0]}`;
+    } else {
+      const isContiguous = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
+      ref = isContiguous
+        ? `${chapter}:${nums[0]}-${nums[nums.length - 1]}`
+        : `${chapter}:${nums.join(',')}`;
+    }
+    lines.push(`[${book} ${ref}]`);
+  }
+
+  return lines.join('\n');
+}
+
+// ── 선택 절 복사 ──
+async function copySelectedVerses() {
+  const sorted = [...selectedVerses]
+    .sort((a, b) => a.dataset.verseNum - b.dataset.verseNum);
+
+  const nums = sorted.map(el => parseInt(el.dataset.verseNum));
+  const header = buildCopyHeader(nums);
+
+  const body = sorted
+    .map(el => `${el.dataset.verseNum}. ${el.querySelector('.verse-text').textContent.trim()}`)
+    .join('\n');
+
+  const text = header ? `${header}\n${body}` : body;
+  await writeClipboard(text);
+
+  // 복사 피드백
+  sorted.forEach(el => {
+    el.classList.add('verse-copied');
+    setTimeout(() => el.classList.remove('verse-copied'), 600);
+  });
+
+  const rangeLabel = buildRangeLabel(nums);
+  showToast(`📋 ${rangeLabel} 복사됨`, 'success', 2200);
+  clearVerseSelection();
+}
+
+// ── 선택 초기화 ──
+function clearVerseSelection() {
+  selectedVerses.forEach(el => el.classList.remove('verse-selected'));
+  selectedVerses.clear();
+  const bar = document.getElementById('verse-copy-bar');
+  if (bar) bar.classList.remove('active');
+}
+
+// ── 클립보드 쓰기 ──
+async function writeClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
 }
 
 function clearPanels() {
