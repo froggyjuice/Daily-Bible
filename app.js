@@ -86,6 +86,18 @@ function initTheme() {
   applyTheme(SEASONS.includes(saved) ? saved : currentSeason(), false);
 }
 
+const SEASON_LABEL = { spring: '🌸 봄', summer: '🌿 여름', autumn: '🍁 가을', winter: '❄️ 겨울' };
+
+// 좁은 화면은 지금 계절 버튼 하나만 보이므로, 누르면 다음 계절로 넘어감
+function pickTheme(theme) {
+  if (window.matchMedia('(max-width: 768px)').matches) {
+    const cur = document.documentElement.getAttribute('data-theme');
+    theme = SEASONS[(SEASONS.indexOf(cur) + 1) % SEASONS.length];
+    showToast(`${SEASON_LABEL[theme]} 테마`, 'info', 1200);
+  }
+  setTheme(theme);
+}
+
 function setTheme(theme) {
   try { localStorage.setItem('theme', theme); } catch {}
   applyTheme(theme, true);
@@ -515,8 +527,9 @@ function clearPanels() {
 //  책 펼침면 — 넓은 화면은 양쪽 쪽, 좁은 화면은 옆으로 넘김
 // ═══════════════════════════════════════════
 function goPage(idx) {
-  const book = document.getElementById('book');
-  book.scrollTo({ left: idx * book.clientWidth, behavior: 'smooth' });
+  // scroll-snap 컨테이너에서는 scrollTo(smooth) 가 멈추는 경우가 있어 scrollIntoView 사용
+  document.getElementById(idx ? 'page-haeseol' : 'page-bonmun')
+    .scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
 }
 
 function syncPagePills() {

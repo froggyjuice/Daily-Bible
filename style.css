@@ -1236,3 +1236,8 @@ mark.hl {
   .dock { margin: 0; border-radius: 0; border-left: none; border-right: none; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
   .dock-drawer { padding: 4px 14px 14px; max-height: 55dvh; }
 }
+
+/* ── 좁은 화면: 계절 버튼은 지금 것 하나만 (누르면 다음 계절) ── */
+@media (max-width: 768px) {
+  .theme-toggle-group .theme-btn:not(.active) { display: none; }
+}
