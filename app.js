@@ -86,7 +86,7 @@ function initTheme() {
   applyTheme(SEASONS.includes(saved) ? saved : currentSeason(), false);
 }
 
-const SEASON_LABEL = { spring: '🌼 봄', summer: '🐳 여름', autumn: '🍁 가을', winter: '❄️ 겨울' };
+const SEASON_LABEL = { spring: '🌼 봄', summer: '🐬 여름', autumn: '🍂 가을', winter: '☃️ 겨울' };
 
 // 좁은 화면은 지금 계절 버튼 하나만 보이므로, 누르면 다음 계절로 넘어감
 function pickTheme(theme) {
@@ -732,7 +732,7 @@ function calNext() {
 
 
 // ═══════════════════════════════════════════
-//  절별 책갈피 — 이 브라우저에만 저장, 표시는 계절 아이콘(🌼 🐳 🍁 ❄️)
+//  절별 책갈피 — 이 브라우저에만 저장, 표시는 계절 아이콘(🌼 🐬 🍂 ☃️)
 //  본문에서 절을 탭해 선택 → 하단 바 🔖 / 아래 도크 🔖 책갈피에서 모아보기
 //  매일성경/순은 같은 성경 본문이라 날짜+절 단위로 저장 (track 은 돌아갈 때 쓰는 값)
 // ═══════════════════════════════════════════

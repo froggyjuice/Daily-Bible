@@ -7,7 +7,7 @@
 /* ── 가을 (기본) — 양피지 · 금빛 ─────────── */
 :root,
 [data-theme="autumn"] {
-  --bm-icon:     "🍁";
+  --bm-icon:     "🍂";
   --bg:          #f7f2e8;
   --surface:     #ede8dc;
   --surface-2:   #e3ddd1;
@@ -63,9 +63,9 @@
   --page-shade:  rgba(110,140,30,.13);
 }
 
-/* ── 여름 — 하늘 · 연주황 · 살구 🐳 ─────────── */
+/* ── 여름 — 하늘 · 연주황 · 살구 🐬 ─────────── */
 [data-theme="summer"] {
-  --bm-icon:     "🐳";
+  --bm-icon:     "🐬";
   --bg:          #eff7fc;
   --surface:     #e1f0fa;
   --surface-2:   #d2e7f6;
@@ -94,7 +94,7 @@
 
 /* ── 겨울 — 밤하늘 · 얼음빛 (어두운 테마) ──── */
 [data-theme="winter"] {
-  --bm-icon:     "❄️";
+  --bm-icon:     "☃️";
   --bg:          #0a0d14;
   --surface:     #0f1520;
   --surface-2:   #141c2e;
