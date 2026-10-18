@@ -295,6 +295,9 @@ async function selectDate(dateStr) {
     parseAndRender(data.content);
     applyHighlights();
     setAudio(data.mediaUrl, data.speaker);
+    const hymnBtn = document.getElementById('btn-hymn');
+    hymnBtn.style.display = currentHymn ? '' : 'none';
+    hymnBtn.textContent = currentHymn ? `🎵 찬송 ${currentHymn}장` : '🎵 찬송';
     document.getElementById('passage-actions').style.display = currentBookInfo ? '' : 'none';
   } catch (e) {
     if (e instanceof AuthRequired) return;
@@ -308,6 +311,7 @@ async function selectDate(dateStr) {
 //  마크다운 파싱
 // ═══════════════════════════════════════════
 let currentBookInfo = null;  // { book: '사사기', chapter: '13' }
+let currentHymn = null;      // 새찬송가 장 번호 (본문 머리 '찬송가 221장')
 
 function parseAndRender(raw) {
   const sections = raw.split(/\n---\n/);
@@ -333,6 +337,7 @@ function extractBookInfo(md) {
   // 제목 추출: **제목** 패턴 (## 본문 다음 줄)
   const titleMatch = md.match(/\*\*([^*]+)\*\*/);
   const title = titleMatch ? titleMatch[1].trim() : '';
+  currentHymn = md.match(/찬송가\s*(\d+)\s*장/)?.[1] || null;
 
   // 패턴: 사사기(Judges)13:15 - 13:25  또는  창세기(Genesis)1:1 - 1:31
   const m = md.match(/([가-힣]+(?:\s[가-힣]+)*)\([^)]+\)(\d+):(\d+)\s*-\s*\d*:?(\d+)/);
@@ -1064,6 +1069,14 @@ function passageRef() {
   const b = currentBookInfo;
   if (!b) return '';
   return b.verseStart === b.verseEnd ? `${b.book} ${b.chapter}:${b.verseStart}` : `${b.book} ${b.chapter}:${b.verseStart}-${b.verseEnd}`;
+}
+
+// 성서유니온이 고른 오늘의 찬송(새찬송가) — 음원 제공처가 없어 유튜브 검색으로 연결 (모바일은 유튜브 앱)
+function playHymn() {
+  if (!currentHymn) return;
+  document.getElementById('qt-audio').pause();
+  const q = `새찬송가 ${currentHymn}장`;
+  window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`, '_blank', 'noopener');
 }
 
 function searchPassage(kind) {
