@@ -561,7 +561,7 @@ function resetPages() {
 
 
 // ═══════════════════════════════════════════
-//  아래 도크 — 메모 / 나눔 토글 (같은 버튼을 다시 누르면 닫힘)
+//  메모 / 나눔 / 책갈피 칸 — ⋯ 더보기에서 열고, 같은 항목을 다시 누르거나 ✕ 로 닫음
 // ═══════════════════════════════════════════
 let dockOpen = null;  // null | 'memo' | 'nanum' | 'bookmarks'
 
@@ -573,6 +573,7 @@ function toggleDock(which) {
     document.getElementById(`dock-btn-${k}`).classList.toggle('active', dockOpen === k);
     document.getElementById(`dock-${k}`).style.display = dockOpen === k ? '' : 'none';
   });
+  if (dockOpen) document.getElementById('dock').scrollIntoView({ block: 'nearest' });
   if (dockOpen === 'memo') document.getElementById('memo-input').focus({ preventScroll: true });
   if (dockOpen === 'bookmarks') renderBookmarks();
 }
@@ -1071,6 +1072,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   closeMore();
   if (document.getElementById('puzzle-modal').style.display === 'flex') closePuzzle();
+  else if (dockOpen) toggleDock(null);
 });
 
 

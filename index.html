@@ -99,6 +99,10 @@
           <div class="more-wrap" id="more-wrap" style="display:none">
             <button class="tab-btn more-btn" id="btn-more" onclick="toggleMore()" aria-haspopup="menu" aria-expanded="false">⋯ 더보기</button>
             <div class="more-menu" id="more-menu" role="menu">
+              <button class="menu-item" id="dock-btn-memo" onclick="toggleDock('memo'); closeMore()" role="menuitem">✏️ 메모</button>
+              <button class="menu-item" id="dock-btn-nanum" onclick="toggleDock('nanum'); closeMore()" role="menuitem">💬 나눔<span class="tab-badge" id="comment-badge"></span></button>
+              <button class="menu-item" id="dock-btn-bookmarks" onclick="toggleDock('bookmarks'); closeMore()" role="menuitem">🔖 책갈피<span class="tab-badge" id="bookmark-badge"></span></button>
+              <div class="menu-sep" role="separator"></div>
               <button class="menu-item" id="btn-audio" onclick="toggleAudio(); closeMore()" role="menuitem" style="display:none">🎧 듣기 <small>공식 오디오</small></button>
               <button class="menu-item" id="btn-hymn" onclick="playHymn(); closeMore()" role="menuitem" style="display:none">🎵 찬송</button>
               <button class="menu-item" onclick="searchPassage('youtube'); closeMore()" role="menuitem">▶ 유튜브</button>
@@ -145,14 +149,10 @@
         </section>
       </div>
 
-      <!-- 아래 도크: 메모 / 나눔 (누를 때마다 열고 닫음) -->
+      <!-- 메모 / 나눔 / 책갈피 칸 (⋯ 더보기에서 열고, ✕ 나 같은 메뉴를 다시 누르면 닫힘) -->
       <div class="dock" id="dock">
-        <div class="dock-bar">
-          <button class="dock-btn" id="dock-btn-memo"  onclick="toggleDock('memo')">✏️ 메모 <span class="dock-chev">▴</span></button>
-          <button class="dock-btn" id="dock-btn-nanum" onclick="toggleDock('nanum')">💬 나눔<span class="tab-badge" id="comment-badge"></span> <span class="dock-chev">▴</span></button>
-          <button class="dock-btn" id="dock-btn-bookmarks" onclick="toggleDock('bookmarks')">🔖 책갈피<span class="tab-badge" id="bookmark-badge"></span> <span class="dock-chev">▴</span></button>
-        </div>
         <div class="dock-drawer">
+          <button class="modal-close dock-close" onclick="toggleDock(null)" aria-label="닫기">✕</button>
           <section class="nanum-section dock-section" id="dock-memo">
             <h3 class="nanum-title">✏️ 내 메모 <small>이 브라우저에만 저장돼요</small></h3>
             <textarea class="nanum-input memo-input" id="memo-input" rows="5"

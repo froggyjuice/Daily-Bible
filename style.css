@@ -941,7 +941,7 @@ html, body {
 /* ── 플로팅 복사 바 ──────────────────────── */
 #verse-copy-bar {
   position: fixed;
-  bottom: 72px;   /* 아래 도크(메모/나눔) 위 */
+  bottom: 56px;   /* 맨 아래 저작권 안내 위 */
   left: 50%;
   transform: translateX(-50%) translateY(80px);
   background: var(--surface-2);
@@ -1186,9 +1186,9 @@ html, body {
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  margin: 14px 18px 0;
+  margin: 14px 18px 10px;
   background: var(--page);
-  border-radius: 8px 8px 0 0;
+  border-radius: 8px;
   box-shadow: 0 0 0 1px var(--border), 0 10px 30px rgba(0,0,0,.12);
   position: relative;
   overflow: hidden;
@@ -1232,52 +1232,30 @@ html, body {
 /* 넓은 화면에서는 쪽 이동 버튼 불필요 */
 .page-pill { display: none; }
 
-/* ── 아래 도크: 메모 / 나눔 ───────────────── */
+/* ── 메모 / 나눔 / 책갈피 칸 (책 아래, 열렸을 때만) ── */
 .dock {
+  display: none;
+  position: relative;
   flex-shrink: 0;
-  margin: 0 18px;
+  margin: 0 18px 10px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-top: none;
   border-radius: 0 0 8px 8px;
-  margin-bottom: 12px;
 }
-/* 버튼 줄과 펼쳐지는 칸의 너비를 같게 — 같은 --dock-w 안에 가운데 정렬, 버튼은 똑같이 3등분 */
-.dock { --dock-w: 560px; --dock-pad: 24px; }
-.dock-bar {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  max-width: calc(var(--dock-w) + 2 * var(--dock-pad));
-  margin: 0 auto;
-  padding: 7px var(--dock-pad);
-}
-.dock-btn {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 5px 8px;
-  width: 100%;
-  white-space: nowrap;
-  font-size: .8rem;
-  font-family: 'Noto Sans KR', sans-serif;
-  color: var(--text-2);
-  cursor: pointer;
-  transition: color .15s, border-color .15s, background .15s;
-}
-.dock-btn:hover { color: var(--gold-light); border-color: var(--gold-dim); }
-.dock-btn.active { color: var(--gold-light); border-color: var(--gold); background: var(--gold-glow); }
-.dock-chev { display: inline-block; font-size: .7rem; margin-left: 2px; transition: transform .2s; }
-.dock-btn.active .dock-chev { transform: rotate(180deg); }
+.dock.open { display: block; }
+.book:has(+ .dock.open) { margin-bottom: 0; border-radius: 8px 8px 0 0; }
 .dock-drawer {
-  display: none;
   max-height: 45dvh;
   overflow-y: auto;
-  padding: 6px var(--dock-pad) 18px;
-  border-top: 1px solid var(--border);
+  padding: 6px 24px 18px;
 }
-.dock.open .dock-drawer { display: block; }
-.dock-section { max-width: var(--dock-w); margin: 10px auto 0; }
+.dock-close { position: absolute; top: 8px; right: 10px; z-index: 1; }
+.dock-section { max-width: 640px; margin: 10px auto 0; }
+.dock-section .nanum-title { padding-right: 34px; }
+
+/* 더보기 메뉴: 메모 · 나눔 · 책갈피 와 나머지 사이 구분선 */
+.menu-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
 /* ── 좁은 화면: 책을 한 쪽씩 옆으로 넘김 ───── */
 @media (max-width: 900px) {
@@ -1295,9 +1273,8 @@ html, body {
   .book::after { display: none; }
   .page { flex: 0 0 100%; scroll-snap-align: start; padding: 16px 16px 40px; }
   .page-pill { display: inline-block; }
-  .dock { margin: 0; border-radius: 0; border-left: none; border-right: none; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
-  .dock { --dock-pad: 14px; }
-  .dock-drawer { padding: 4px var(--dock-pad) 14px; max-height: 55dvh; }
+  .dock { margin: 0; border-radius: 0; border-left: none; border-right: none; border-top: 1px solid var(--border); }
+  .dock-drawer { padding: 4px 14px 14px; max-height: 55dvh; }
 }
 
 /* ── 좁은 화면: 계절 버튼은 지금 것 하나만 (누르면 다음 계절) ── */
@@ -1466,6 +1443,4 @@ html, body {
   }
   .site-footer .ft-long { display: none; }
   .site-footer .ft-short { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* 도크가 아이폰 홈 표시줄 여백을 갖고 있었으므로, 이제 그 여백은 footer 가 가짐 */
-  .dock { padding-bottom: 0; }
 }
