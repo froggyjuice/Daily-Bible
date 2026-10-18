@@ -58,7 +58,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (params.has('date') || params.has('v')) history.replaceState(null, '', location.pathname);
 
   if (isMobile()) document.getElementById('btn-godpeople').style.display = '';
-  document.addEventListener('selectionchange', onSelectionChange);
+  migrateHighlights();
   document.getElementById('book').addEventListener('scroll', syncPagePills, { passive: true });
   toggleDock(null);
 
@@ -276,7 +276,6 @@ async function selectDate(dateStr) {
   currentDate = dateStr;
   clearPanels();
   clearVerseSelection();
-  hideHighlightBar();
   resetPages();
   document.getElementById('content-meta').textContent = formatDateKo(dateStr);
   loadMemo(dateStr);
@@ -293,7 +292,7 @@ async function selectDate(dateStr) {
     const data = await apiFetch(`/api/entry?track=${currentVersion}&date=${dateStr}`, { cache: 'no-cache' });
     if (currentDate !== dateStr) return;  // 그사이 다른 날짜를 눌렀으면 버림
     parseAndRender(data.content);
-    applyHighlights();
+    applyBookmarks();
     setAudio(data.mediaUrl, data.speaker);
     const hymnBtn = document.getElementById('btn-hymn');
     hymnBtn.style.display = currentHymn ? '' : 'none';
@@ -413,7 +412,7 @@ function updateCopyBar() {
     bar.innerHTML = `
       <span class="vcb-info"></span>
       <div class="vcb-actions">
-        <button class="vcb-btn vcb-hl" onclick="highlightSelectedVerses()" title="형광펜">🖍</button>
+        <button class="vcb-btn vcb-bm" onclick="bookmarkSelectedVerses()" title="책갈피">🔖</button>
         <button class="vcb-btn" onclick="copySelectedVerses()">📋 복사</button>
         <button class="vcb-btn vcb-cancel" onclick="clearVerseSelection()">✕</button>
       </div>`;
@@ -559,17 +558,18 @@ function resetPages() {
 // ═══════════════════════════════════════════
 //  아래 도크 — 메모 / 나눔 토글 (같은 버튼을 다시 누르면 닫힘)
 // ═══════════════════════════════════════════
-let dockOpen = null;  // null | 'memo' | 'nanum'
+let dockOpen = null;  // null | 'memo' | 'nanum' | 'bookmarks'
 
 function toggleDock(which) {
   dockOpen = dockOpen === which ? null : which;
   const dock = document.getElementById('dock');
   dock.classList.toggle('open', !!dockOpen);
-  ['memo', 'nanum'].forEach(k => {
+  ['memo', 'nanum', 'bookmarks'].forEach(k => {
     document.getElementById(`dock-btn-${k}`).classList.toggle('active', dockOpen === k);
     document.getElementById(`dock-${k}`).style.display = dockOpen === k ? '' : 'none';
   });
   if (dockOpen === 'memo') document.getElementById('memo-input').focus({ preventScroll: true });
+  if (dockOpen === 'bookmarks') renderBookmarks();
 }
 
 
@@ -732,155 +732,171 @@ function calNext() {
 
 
 // ═══════════════════════════════════════════
-//  형광펜 (노란색) — 이 브라우저에만 저장
-//  본문: 절을 탭해 선택 → 하단 바 🖍 / 해설: 글자를 드래그 → 하단 바 🖍
+//  절별 책갈피 — 이 브라우저에만 저장, 표시는 계절 아이콘(🌼 🐳 🍁 ❄️)
+//  본문에서 절을 탭해 선택 → 하단 바 🔖 / 아래 도크 🔖 책갈피에서 모아보기
+//  매일성경/순은 같은 성경 본문이라 날짜+절 단위로 저장 (track 은 돌아갈 때 쓰는 값)
 // ═══════════════════════════════════════════
-const hlKey = () => `hl:${currentVersion}:${currentDate}`;
+const BM_KEY = 'bookmarks';
 
-function loadHl() {
-  try { return JSON.parse(localStorage.getItem(hlKey())) || { v: [], r: [] }; }
-  catch { return { v: [], r: [] }; }
+function loadBookmarks() {
+  try { return JSON.parse(localStorage.getItem(BM_KEY)) || []; }
+  catch { return []; }
 }
 
-function saveHl(hl) {
-  try {
-    if (!hl.v.length && !hl.r.length) localStorage.removeItem(hlKey());
-    else localStorage.setItem(hlKey(), JSON.stringify(hl));
-  } catch { showToast('브라우저 저장소를 쓸 수 없습니다', 'error'); }
+function saveBookmarks(list) {
+  try { localStorage.setItem(BM_KEY, JSON.stringify(list)); }
+  catch { showToast('브라우저 저장소를 쓸 수 없습니다', 'error'); }
+  document.getElementById('bookmark-badge').textContent = list.length || '';
 }
 
-function applyHighlights() {
-  const hl = loadHl();
+function applyBookmarks() {
+  const marked = new Set(loadBookmarks().filter(b => b.date === currentDate).map(b => b.verse));
   document.querySelectorAll('#bonmun-body .verse-line').forEach(el =>
-    el.classList.toggle('verse-hl', hl.v.includes(Number(el.dataset.verseNum)))
+    el.classList.toggle('bookmarked', marked.has(Number(el.dataset.verseNum)))
   );
-  const body = document.getElementById('haeseol-body');
-  body.querySelectorAll('mark.hl').forEach(m => m.replaceWith(...m.childNodes));
-  body.normalize();
-  hl.r.forEach((range, idx) => wrapRange(body, range, idx));
+  fillBookmarkTexts();
 }
 
-function textNodes(container) {
-  const nodes = [];
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-  for (let pos = 0, n; (n = walker.nextNode()); pos += n.data.length) nodes.push({ n, start: pos });
-  return nodes;
-}
-
-// 컨테이너 textContent 기준 [시작, 끝) 범위를 <mark class="hl"> 로 감싼다
-function wrapRange(container, [rs, re], idx) {
-  for (const { n, start } of textNodes(container)) {
-    const a = Math.max(rs, start) - start;
-    const b = Math.min(re, start + n.data.length) - start;
-    if (a >= b) continue;
-    let target = n;
-    if (b < target.data.length) target.splitText(b);
-    if (a > 0) target = target.splitText(a);
-    const mark = document.createElement('mark');
-    mark.className = 'hl';
-    mark.dataset.r = idx;
-    target.replaceWith(mark);
-    mark.appendChild(target);
+// 예전 형광펜에서 옮겨온 책갈피는 절 내용이 비어 있으니, 그 날짜를 열 때 채움
+function fillBookmarkTexts() {
+  const list = loadBookmarks();
+  let changed = false;
+  for (const b of list) {
+    if (b.date !== currentDate || b.text) continue;
+    const el = document.querySelector(`#bonmun-body .verse-line[data-verse-num="${b.verse}"] .verse-text`);
+    if (!el) continue;
+    Object.assign(b, {
+      text: el.textContent.trim(),
+      book: currentBookInfo?.book || '',
+      chapter: currentBookInfo?.chapter || '',
+      title: currentBookInfo?.title || '',
+    });
+    changed = true;
   }
+  if (changed) saveBookmarks(list);
 }
 
-function textOffset(container, node, offset) {
-  const r = document.createRange();
-  r.selectNodeContents(container);
-  r.setEnd(node, offset);
-  return r.toString().length;
-}
+// 선택한 절에 책갈피 꽂기 / 이미 다 꽂혀 있으면 빼기
+function bookmarkSelectedVerses() {
+  const els = [...selectedVerses].sort((a, b) => a.dataset.verseNum - b.dataset.verseNum);
+  const nums = els.map(el => Number(el.dataset.verseNum));
+  let list = loadBookmarks();
+  const have = new Set(list.filter(b => b.date === currentDate).map(b => b.verse));
+  const allOn = nums.every(n => have.has(n));
 
-function mergeRanges(ranges) {
-  const sorted = ranges.slice().sort((x, y) => x[0] - y[0]);
-  const out = [];
-  for (const [s, e] of sorted) {
-    if (out.length && s <= out[out.length - 1][1]) out[out.length - 1][1] = Math.max(out[out.length - 1][1], e);
-    else out.push([s, e]);
-  }
-  return out;
-}
-
-// ── 본문: 선택한 절 칠하기 / 이미 다 칠해져 있으면 지우기 ──
-function highlightSelectedVerses() {
-  const nums = [...selectedVerses].map(el => Number(el.dataset.verseNum));
-  const hl = loadHl();
-  const allOn = nums.every(n => hl.v.includes(n));
-  hl.v = allOn ? hl.v.filter(n => !nums.includes(n)) : [...new Set([...hl.v, ...nums])].sort((a, b) => a - b);
-  saveHl(hl);
-  clearVerseSelection();
-  applyHighlights();
-  showToast(allOn ? '🖍 형광펜 지움' : '🖍 형광펜 칠함', 'success', 1800);
-}
-
-// ── 해설: 글자 선택 → 하단 바 ──
-let hlPending = null;   // { add: [s, e] } | { remove: idx }
-let hlHideTimer = null;
-
-function onSelectionChange() {
-  const sel = window.getSelection();
-  const body = document.getElementById('haeseol-body');
-  if (sel.rangeCount && !sel.isCollapsed) {
-    const r = sel.getRangeAt(0);
-    if (body.contains(r.commonAncestorContainer)) {
-      const s = textOffset(body, r.startContainer, r.startOffset);
-      const e = textOffset(body, r.endContainer, r.endOffset);
-      if (e > s) {
-        clearTimeout(hlHideTimer);
-        hlPending = { add: [s, e] };
-        showHighlightBar('형광펜 칠하기');
-        return;
-      }
+  if (allOn) {
+    list = list.filter(b => !(b.date === currentDate && nums.includes(b.verse)));
+  } else {
+    for (const el of els) {
+      const verse = Number(el.dataset.verseNum);
+      if (have.has(verse)) continue;
+      list.push({
+        date: currentDate,
+        track: currentVersion,
+        verse,
+        book: currentBookInfo?.book || '',
+        chapter: currentBookInfo?.chapter || '',
+        title: currentBookInfo?.title || '',
+        text: el.querySelector('.verse-text').textContent.trim(),
+        savedAt: Date.now(),
+      });
     }
   }
-  // 모바일은 버튼을 누르는 순간 선택이 풀릴 수 있어서 잠깐 기다렸다가 숨김
-  if (hlPending?.add) hlHideTimer = setTimeout(hideHighlightBar, 400);
+  saveBookmarks(list);
+  clearVerseSelection();
+  applyBookmarks();
+  if (dockOpen === 'bookmarks') renderBookmarks();
+  showToast(allOn ? '🔖 책갈피를 뺐어요' : '🔖 책갈피를 꽂았어요', 'success', 1600);
 }
 
-document.addEventListener('click', e => {
-  const mark = e.target.closest?.('#haeseol-body mark.hl');
-  if (mark && window.getSelection().isCollapsed) {
-    hlPending = { remove: Number(mark.dataset.r) };
-    showHighlightBar('이 형광펜 지우기');
-  } else if (hlPending && hlPending.remove !== undefined && !e.target.closest('#hl-bar')) {
-    hideHighlightBar();
+// 형광펜(절 단위)을 쓰던 브라우저: 칠해 둔 절을 책갈피로 옮기고 형광펜 기록은 정리
+function migrateHighlights() {
+  const keys = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (/^hl:(main|soon):\d{4}-\d{2}-\d{2}$/.test(k)) keys.push(k);
+    }
+  } catch { return; }
+
+  const list = loadBookmarks();
+  const ids = new Set(list.map(b => `${b.date}:${b.verse}`));
+  for (const k of keys) {
+    const [, track, date] = k.split(':');
+    let verses = [];
+    try { verses = JSON.parse(localStorage.getItem(k))?.v || []; } catch {}
+    for (const verse of verses) {
+      if (ids.has(`${date}:${verse}`)) continue;
+      ids.add(`${date}:${verse}`);
+      list.push({ date, track, verse, book: '', chapter: '', title: '', text: '', savedAt: Date.now() });
+    }
+    try { localStorage.removeItem(k); } catch {}
   }
-});
+  saveBookmarks(list);
+}
 
-function showHighlightBar(label) {
-  let bar = document.getElementById('hl-bar');
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'hl-bar';
-    bar.innerHTML = `
-      <span class="vcb-info"></span>
-      <div class="vcb-actions">
-        <button class="vcb-btn vcb-hl" onclick="applyPendingHighlight()">🖍</button>
-        <button class="vcb-btn vcb-cancel" onclick="hideHighlightBar()">✕</button>
-      </div>`;
-    // 버튼을 눌러도 텍스트 선택이 풀리지 않게
-    bar.addEventListener('pointerdown', e => e.preventDefault());
-    document.body.appendChild(bar);
+// ── 모아보기 ──
+function renderBookmarks() {
+  const ul = document.getElementById('bookmark-list');
+  const list = loadBookmarks().sort((a, b) => b.date.localeCompare(a.date) || a.verse - b.verse);
+  document.getElementById('bookmark-count').textContent = list.length ? `${list.length}개` : '';
+  ul.innerHTML = '';
+  if (!list.length) {
+    ul.innerHTML = '<li class="comment-empty">본문에서 절을 눌러 고른 뒤 🔖 를 누르면 여기에 모여요</li>';
+    return;
   }
-  bar.querySelector('.vcb-info').textContent = label;
-  bar.classList.add('active');
+
+  let lastDate = null;
+  for (const b of list) {
+    if (b.date !== lastDate) {
+      lastDate = b.date;
+      const head = document.createElement('li');
+      head.className = 'bm-date';
+      head.textContent = formatDateKo(b.date) + (b.title ? ` · ${b.title}` : '');
+      ul.appendChild(head);
+    }
+    const li = document.createElement('li');
+    li.className = 'bm-item';
+    const icon = document.createElement('span');
+    icon.className = 'bm-icon';
+    const main = document.createElement('button');
+    main.className = 'bm-main';
+    main.onclick = () => openBookmark(b);
+    const ref = document.createElement('span');
+    ref.className = 'bm-ref';
+    ref.textContent = b.book ? `${b.book} ${b.chapter}:${b.verse}` : `${b.verse}절`;
+    const text = document.createElement('span');
+    text.className = 'bm-text';
+    text.textContent = b.text || '(이 날짜를 한 번 열면 내용이 채워져요)';
+    main.append(ref, text);
+    const del = document.createElement('button');
+    del.className = 'bm-del';
+    del.title = '책갈피 빼기';
+    del.textContent = '✕';
+    del.onclick = () => removeBookmark(b);
+    li.append(icon, main, del);
+    ul.appendChild(li);
+  }
 }
 
-function hideHighlightBar() {
-  clearTimeout(hlHideTimer);
-  hlPending = null;
-  document.getElementById('hl-bar')?.classList.remove('active');
+function removeBookmark(b) {
+  saveBookmarks(loadBookmarks().filter(x => !(x.date === b.date && x.verse === b.verse)));
+  if (b.date === currentDate) applyBookmarks();
+  renderBookmarks();
 }
 
-function applyPendingHighlight() {
-  if (!hlPending || !currentDate) return;
-  const hl = loadHl();
-  if (hlPending.add) hl.r = mergeRanges([...hl.r, hlPending.add]);
-  else hl.r.splice(hlPending.remove, 1);
-  saveHl(hl);
-  window.getSelection().removeAllRanges();
-  hideHighlightBar();
-  applyHighlights();
+// 책갈피를 누르면 그 날짜 본문으로 가서 해당 절을 보여줌
+async function openBookmark(b) {
+  toggleDock(null);
+  if (b.track && b.track !== currentVersion) await switchVersion(b.track);
+  if (currentDate !== b.date) await selectDate(b.date);
+  const book = document.getElementById('book');
+  book.scrollLeft = document.getElementById('page-bonmun').offsetLeft;  // 좁은 화면: 본문 쪽으로
+  const el = document.querySelector(`#bonmun-body .verse-line[data-verse-num="${b.verse}"]`);
+  if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  el.classList.add('verse-copied');
+  setTimeout(() => el.classList.remove('verse-copied'), 700);
 }
 
 

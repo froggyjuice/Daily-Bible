@@ -7,6 +7,7 @@
 /* ── 가을 (기본) — 양피지 · 금빛 ─────────── */
 :root,
 [data-theme="autumn"] {
+  --bm-icon:     "🍁";
   --bg:          #f7f2e8;
   --surface:     #ede8dc;
   --surface-2:   #e3ddd1;
@@ -31,11 +32,11 @@
   --scrollbar:   #cbc5b8;
   --page:        #fbf7ee;
   --page-shade:  rgba(90,60,20,.13);
-  --hl:          rgba(255,221,0,.55);
 }
 
 /* ── 봄 — 연두 · 초록 · 노랑 🌼 ─────────────── */
 [data-theme="spring"] {
+  --bm-icon:     "🌼";
   --bg:          #f6f9ec;
   --surface:     #edf4d9;
   --surface-2:   #e2edc6;
@@ -58,13 +59,13 @@
 
   --header-bg:   linear-gradient(90deg,#e8f3cf 0%,#fbf6cf 100%);
   --scrollbar:   #cadaa3;
-  --page:        #fbfdf4;   /* 노란 형광펜이 묻히지 않게 종이는 연두빛 흰색 */
+  --page:        #fbfdf4;
   --page-shade:  rgba(110,140,30,.13);
-  --hl:          rgba(255,200,0,.62);
 }
 
 /* ── 여름 — 하늘 · 연주황 · 살구 🐳 ─────────── */
 [data-theme="summer"] {
+  --bm-icon:     "🐳";
   --bg:          #eff7fc;
   --surface:     #e1f0fa;
   --surface-2:   #d2e7f6;
@@ -89,11 +90,11 @@
   --scrollbar:   #b3d4ec;
   --page:        #fffaf6;
   --page-shade:  rgba(40,110,170,.11);
-  --hl:          rgba(255,221,0,.55);
 }
 
 /* ── 겨울 — 밤하늘 · 얼음빛 (어두운 테마) ──── */
 [data-theme="winter"] {
+  --bm-icon:     "❄️";
   --bg:          #0a0d14;
   --surface:     #0f1520;
   --surface-2:   #141c2e;
@@ -118,7 +119,6 @@
   --scrollbar:   #253350;
   --page:        #111a28;
   --page-shade:  rgba(0,0,0,.45);
-  --hl:          rgba(255,210,0,.30);
 }
 
 /* ── 리셋 & 기본 ──────────────────────────── */
@@ -939,8 +939,7 @@ html, body {
 }
 
 /* ── 플로팅 복사 바 ──────────────────────── */
-#verse-copy-bar,
-#hl-bar {
+#verse-copy-bar {
   position: fixed;
   bottom: 72px;   /* 아래 도크(메모/나눔) 위 */
   left: 50%;
@@ -959,8 +958,7 @@ html, body {
   transition: transform .3s cubic-bezier(.4,0,.2,1), opacity .3s ease;
   white-space: nowrap;
 }
-#verse-copy-bar.active,
-#hl-bar.active {
+#verse-copy-bar.active {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
 }
@@ -1000,18 +998,48 @@ html, body {
 }
 .vcb-btn.vcb-cancel:hover { color: var(--red); border-color: var(--red); }
 
-/* ── 형광펜 (노란색) ───────────────────────── */
-
-.verse-line.verse-hl { background: var(--hl); }
-.verse-line.verse-hl:hover { background: var(--hl); filter: brightness(1.05); }
-mark.hl {
-  background: var(--hl);
-  color: inherit;
-  border-radius: 2px;
-  padding: 0 1px;
-  cursor: pointer;
+/* ── 절별 책갈피 — 아이콘은 계절을 따라감 ──── */
+.verse-line.bookmarked { box-shadow: inset 3px 0 0 var(--gold-dim); }
+.verse-line.bookmarked::before {
+  content: var(--bm-icon);
+  position: absolute;
+  left: -7px; top: -7px;
+  font-size: .9rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.18));
+  pointer-events: none;
 }
-.vcb-btn.vcb-hl { background: #ffd400; color: #2a2200; }  /* 형광펜은 테마와 무관하게 노란색 */
+.vcb-btn.vcb-bm { padding: 6px 11px; }
+
+.bm-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.bm-date {
+  font-size: .74rem; color: var(--text-3);
+  margin-top: 8px; padding-bottom: 2px;
+  border-bottom: 1px dashed var(--border);
+}
+.bm-date:first-child { margin-top: 0; }
+.bm-item { display: flex; align-items: flex-start; gap: 8px; }
+.bm-icon::before { content: var(--bm-icon); font-size: .9rem; line-height: 1.6; }
+.bm-main {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text);
+}
+.bm-main:hover { border-color: var(--gold-dim); }
+.bm-ref { font-size: .74rem; font-weight: 600; color: var(--gold-light); }
+.bm-text { font-size: .86rem; line-height: 1.6; font-family: 'Noto Serif KR', serif; }
+.bm-del {
+  background: none; border: none; color: var(--text-3);
+  cursor: pointer; font-size: .8rem; padding: 6px 2px;
+}
+.bm-del:hover { color: var(--red); }
 
 /* ── 탭 뱃지 (댓글 수) ─────────────────────── */
 .tab-badge:not(:empty) {

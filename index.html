@@ -130,6 +130,7 @@
         <div class="dock-bar">
           <button class="dock-btn" id="dock-btn-memo"  onclick="toggleDock('memo')">✏️ 메모 <span class="dock-chev">▴</span></button>
           <button class="dock-btn" id="dock-btn-nanum" onclick="toggleDock('nanum')">💬 나눔<span class="tab-badge" id="comment-badge"></span> <span class="dock-chev">▴</span></button>
+          <button class="dock-btn" id="dock-btn-bookmarks" onclick="toggleDock('bookmarks')">🔖 책갈피<span class="tab-badge" id="bookmark-badge"></span> <span class="dock-chev">▴</span></button>
         </div>
         <div class="dock-drawer">
           <section class="nanum-section dock-section" id="dock-memo">
@@ -147,6 +148,11 @@
               <textarea class="nanum-input" id="comment-body" maxlength="500" rows="3" placeholder="함께 나누고 싶은 이야기를 남겨주세요" required></textarea>
               <button type="submit" class="login-btn primary" id="comment-submit">등록</button>
             </form>
+          </section>
+
+          <section class="nanum-section dock-section" id="dock-bookmarks">
+            <h3 class="nanum-title">🔖 책갈피 모아보기 <small id="bookmark-count"></small> <small>이 브라우저에만 저장돼요</small></h3>
+            <ul class="bm-list" id="bookmark-list"></ul>
           </section>
         </div>
       </div>
