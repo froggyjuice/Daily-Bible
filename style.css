@@ -1444,3 +1444,81 @@ html, body {
   .site-footer .ft-long { display: none; }
   .site-footer .ft-short { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* ── 📮 출석도장 ───────────────────────────── */
+.attend-modal { width: 400px; max-height: 88dvh; }
+.attend-modal .login-modal-header { flex-shrink: 0; }
+.attend-body { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.attend-summary { text-align: center; }
+.attend-big b { font-size: 2.6rem; font-family: 'Inter', sans-serif; color: var(--gold-light); line-height: 1; }
+.attend-big span { font-size: .9rem; color: var(--text-2); margin-left: 4px; }
+.attend-sub { font-size: .74rem; color: var(--text-3); margin-top: 2px; }
+.attend-punch { display: flex; justify-content: center; gap: 10px; }
+.punch {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 2px dashed var(--gold-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; color: var(--text-3);
+  font-family: 'Inter', sans-serif;
+}
+.punch.on { border-style: solid; border-color: var(--gold); background: var(--gold-glow); font-size: 0; }
+.punch.on::before { content: var(--bm-icon); font-size: 1.3rem; animation: stampIn .35s ease; }
+@keyframes stampIn { from { transform: scale(1.8) rotate(-20deg); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.attend-next { text-align: center; font-size: .8rem; color: var(--text-2); margin: 0; }
+.attend-grid { overflow: visible; padding: 4px 0; }
+.attend-grid .cal-cell { position: relative; }
+.attend-grid .cal-cell.stamped span { opacity: .35; }
+.attend-grid .cal-cell.stamped::after {
+  content: var(--bm-icon);
+  position: absolute;
+  font-size: 1.05rem;
+}
+
+/* 연속 5일 축하 */
+.celebrate {
+  position: fixed; inset: 0;
+  z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.18);
+  overflow: hidden;
+  animation: celebrateIn .3s ease;
+  cursor: pointer;
+}
+.celebrate.out { opacity: 0; transition: opacity .35s ease; }
+@keyframes celebrateIn { from { opacity: 0; } to { opacity: 1; } }
+.celebrate-card {
+  position: relative; z-index: 1;
+  background: var(--surface);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  padding: 18px 26px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,.3);
+  animation: celebrateCard .5s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes celebrateCard { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.celebrate-title { font-size: 1.3rem; font-weight: 700; color: var(--gold-light); }
+.celebrate-sub { font-size: .82rem; color: var(--text-2); margin-top: 4px; }
+.celebrate-pop {
+  position: absolute;
+  bottom: -40px;
+  pointer-events: none;
+  animation: celebratePop 2.6s ease-out forwards;
+}
+.celebrate-pop::before { content: var(--bm-icon); }
+@keyframes celebratePop {
+  0%   { transform: translateY(0) rotate(0); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translateY(-105vh) rotate(40deg); opacity: .2; }
+}
+
+@media (max-width: 768px) {
+  .attend-modal {
+    top: auto; bottom: 0; left: 0;
+    width: 100%; max-width: 100%;
+    border-radius: var(--radius) var(--radius) 0 0;
+    transform: translateY(20px);
+  }
+  .attend-modal.active { transform: translateY(0); }
+}

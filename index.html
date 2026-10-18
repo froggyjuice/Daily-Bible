@@ -102,6 +102,7 @@
               <button class="menu-item" id="dock-btn-memo" onclick="toggleDock('memo'); closeMore()" role="menuitem">✏️ 메모</button>
               <button class="menu-item" id="dock-btn-nanum" onclick="toggleDock('nanum'); closeMore()" role="menuitem">💬 나눔<span class="tab-badge" id="comment-badge"></span></button>
               <button class="menu-item" id="dock-btn-bookmarks" onclick="toggleDock('bookmarks'); closeMore()" role="menuitem">🔖 책갈피<span class="tab-badge" id="bookmark-badge"></span></button>
+              <button class="menu-item" id="btn-attend" onclick="openAttendance(); closeMore()" role="menuitem">📮 출석도장</button>
               <div class="menu-sep" role="separator"></div>
               <button class="menu-item" id="btn-audio" onclick="toggleAudio(); closeMore()" role="menuitem" style="display:none">🎧 듣기 <small>공식 오디오</small></button>
               <button class="menu-item" id="btn-hymn" onclick="playHymn(); closeMore()" role="menuitem" style="display:none">🎵 찬송</button>
@@ -204,6 +205,30 @@
       <div class="login-test-result error" id="login-error"></div>
     </div>
   </form>
+
+  <!-- 출석도장 -->
+  <div class="login-modal-backdrop" id="attend-backdrop" style="display:none" onclick="closeAttendance()"></div>
+  <div class="login-modal attend-modal" id="attend-modal" style="display:none" role="dialog" aria-label="출석도장">
+    <div class="login-modal-header">
+      <h3>📮 출석도장</h3>
+      <button class="modal-close" onclick="closeAttendance()" aria-label="닫기">✕</button>
+    </div>
+    <div class="login-modal-body attend-body">
+      <div class="attend-summary">
+        <div class="attend-big"><b id="att-streak">0</b><span>일 연속</span></div>
+        <div class="attend-sub" id="att-total"></div>
+      </div>
+      <div class="attend-punch" id="att-punch" aria-label="5일 도장판"></div>
+      <p class="attend-next" id="att-next"></p>
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="attendMonth(-1)" aria-label="이전 달">&#8249;</button>
+        <span class="cal-title" id="att-title"></span>
+        <button class="cal-nav-btn" onclick="attendMonth(1)" aria-label="다음 달">&#8250;</button>
+      </div>
+      <div class="cal-grid attend-grid" id="att-grid"></div>
+      <p class="login-help">하루 한 번 사이트를 열면 자동으로 찍혀요 · 이 브라우저에만 저장돼요</p>
+    </div>
+  </div>
 
   <!-- 말씀 퍼즐 -->
   <div class="login-modal-backdrop" id="puzzle-backdrop" style="display:none" onclick="closePuzzle()"></div>

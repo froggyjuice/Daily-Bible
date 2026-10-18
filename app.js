@@ -214,6 +214,9 @@ async function loadEntries() {
 
     renderSidebar(entries);
 
+    // 암호를 통과해 데이터를 처음 불러왔을 때 출석 도장
+    if (!attendanceReady) { attendanceReady = true; stampAttendance(); }
+
     // 공유 링크 날짜 → 없으면 최신(= 오늘, 서버가 오늘 이후는 내려주지 않음)
     if (entries.length > 0) {
       const target = pendingDate && entrySet.has(pendingDate) ? pendingDate : entries[0];
@@ -1072,6 +1075,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   closeMore();
   if (document.getElementById('puzzle-modal').style.display === 'flex') closePuzzle();
+  else if (document.getElementById('attend-modal').style.display === 'flex') closeAttendance();
   else if (dockOpen) toggleDock(null);
 });
 
@@ -1205,6 +1209,138 @@ function isMobile() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
+
+
+// ═══════════════════════════════════════════
+//  📮 출석도장 — 하루 한 번 사이트를 열면 자동으로 찍힘 (KST 날짜, 이 브라우저에만 저장)
+//  연속 5일마다(5, 10, 15…) 화면 가득 계절 아이콘이 떠오르는 축하
+// ═══════════════════════════════════════════
+const ATT_KEY = 'attendance';
+const ATT_GOAL = 5;
+let attYear = null, attMonth = null;   // 도장판 달력에 보이는 달
+
+function loadAttendance() {
+  try {
+    const days = JSON.parse(localStorage.getItem(ATT_KEY));
+    return Array.isArray(days) ? days : [];
+  } catch { return []; }
+}
+
+function attendanceStreak(days, today = todayKST()) {
+  const set = new Set(days);
+  let n = 0;
+  for (let d = today; set.has(d); d = offsetDate(d, -1)) n++;
+  return n;
+}
+
+// 오늘 도장이 없으면 찍고, 새로 찍었으면 알림 / 5일마다 축하
+function stampAttendance() {
+  const today = todayKST();
+  const days = loadAttendance();
+  if (!days.includes(today)) {
+    days.push(today);
+    days.sort();
+    try { localStorage.setItem(ATT_KEY, JSON.stringify(days)); }
+    catch { return; }   // 저장이 안 되는 브라우저(사생활 보호 모드 등)는 조용히 건너뜀
+    const streak = attendanceStreak(days, today);
+    if (streak % ATT_GOAL === 0) celebrateStreak(streak);
+    else showToast(`📮 오늘 출석 도장 쾅! 연속 ${streak}일째`, 'success', 2600);
+  }
+  updateAttendBadge(days);
+}
+
+function updateAttendBadge(days = loadAttendance()) {
+  const streak = attendanceStreak(days);
+  document.getElementById('btn-attend').innerHTML =
+    `📮 출석도장${streak ? ` <small>연속 ${streak}일</small>` : ''}`;
+}
+
+function openAttendance() {
+  const [y, m] = todayKST().split('-').map(Number);
+  attYear = y; attMonth = m - 1;
+  renderAttendance();
+  const modal = document.getElementById('attend-modal');
+  const backdrop = document.getElementById('attend-backdrop');
+  modal.style.display = 'flex';
+  backdrop.style.display = 'block';
+  setTimeout(() => { modal.classList.add('active'); backdrop.classList.add('active'); }, 10);
+}
+
+function closeAttendance() {
+  const modal = document.getElementById('attend-modal');
+  const backdrop = document.getElementById('attend-backdrop');
+  modal.classList.remove('active');
+  backdrop.classList.remove('active');
+  setTimeout(() => { modal.style.display = 'none'; backdrop.style.display = 'none'; }, 250);
+}
+
+function attendMonth(delta) {
+  attMonth += delta;
+  if (attMonth < 0) { attMonth = 11; attYear--; }
+  if (attMonth > 11) { attMonth = 0; attYear++; }
+  renderAttendance();
+}
+
+function renderAttendance() {
+  const days = loadAttendance();
+  const set = new Set(days);
+  const today = todayKST();
+  const streak = attendanceStreak(days, today);
+
+  document.getElementById('att-streak').textContent = streak;
+  document.getElementById('att-total').textContent = days.length ? `지금까지 ${days.length}일 출석` : '';
+
+  // 5칸 도장판: 이번 묶음에서 찍힌 만큼 계절 아이콘
+  const filled = streak === 0 ? 0 : (streak % ATT_GOAL || ATT_GOAL);
+  document.getElementById('att-punch').innerHTML = [...Array(ATT_GOAL)]
+    .map((_, i) => `<span class="punch${i < filled ? ' on' : ''}">${i + 1}</span>`).join('');
+  document.getElementById('att-next').textContent =
+    streak && streak % ATT_GOAL === 0
+      ? `🎉 연속 ${streak}일 달성! 다음 축하까지 ${ATT_GOAL}일`
+      : `다음 축하까지 ${ATT_GOAL - filled}일`;
+
+  // 달력: 도장 찍힌 날은 계절 아이콘
+  document.getElementById('att-title').textContent = `${attYear}년 ${attMonth + 1}월`;
+  const first = new Date(Date.UTC(attYear, attMonth, 1)).getUTCDay();
+  const last = new Date(Date.UTC(attYear, attMonth + 1, 0)).getUTCDate();
+  let html = ['일','월','화','수','목','금','토'].map(d => `<div class="cal-day-header">${d}</div>`).join('');
+  for (let i = 0; i < first; i++) html += '<div class="cal-cell empty"></div>';
+  for (let d = 1; d <= last; d++) {
+    const ds = `${attYear}-${String(attMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const cls = 'cal-cell' + (set.has(ds) ? ' stamped' : '') + (ds === today ? ' today' : '');
+    html += `<div class="${cls}"><span>${d}</span></div>`;
+  }
+  document.getElementById('att-grid').innerHTML = html;
+}
+
+// 연속 5일마다: 화면 가득 계절 아이콘 + 축하 카드 (3초 뒤 저절로 사라짐, 누르면 바로 닫힘)
+function celebrateStreak(streak) {
+  const layer = document.createElement('div');
+  layer.className = 'celebrate';
+  layer.innerHTML = `
+    <div class="celebrate-card">
+      <div class="celebrate-title">🎉 연속 ${streak}일 출석!</div>
+      <div class="celebrate-sub">매일 말씀 앞에 나아오는 걸음, 정말 귀해요</div>
+    </div>`;
+  for (let i = 0; i < 28; i++) {
+    const s = document.createElement('span');
+    s.className = 'celebrate-pop';
+    s.style.left = `${Math.random() * 100}%`;
+    s.style.animationDelay = `${Math.random() * 0.9}s`;
+    s.style.fontSize = `${1.2 + Math.random() * 1.6}rem`;
+    layer.appendChild(s);
+  }
+  const close = () => { layer.classList.add('out'); setTimeout(() => layer.remove(), 400); };
+  layer.addEventListener('click', close);
+  document.body.appendChild(layer);
+  setTimeout(close, 3600);
+}
+
+// 설치한 앱을 켜 둔 채 자정을 넘긴 경우: 다시 화면에 돌아오면 그날 도장
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && attendanceReady) stampAttendance();
+});
+let attendanceReady = false;
 
 
 // ═══════════════════════════════════════════
