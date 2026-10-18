@@ -1,4 +1,4 @@
-import { checkPassword, setAuthCookie } from '../lib/auth.js';
+import { checkPassword, setAuthCookie } from './_lib/auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });

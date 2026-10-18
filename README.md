@@ -6,7 +6,7 @@
 
 ```
 Vercel Cron (하루 1회, icn1) ─┐
-대시보드 🔄 버튼 (/api/scrape) ├─ lib/job.js → lib/scrape.js (fetch) → Supabase qt_entries (upsert)
+대시보드 🔄 버튼 (/api/scrape) ├─ api/_lib/job.js → api/_lib/scrape.js (fetch) → Supabase qt_entries (upsert)
 로컬 PC 로그온 (대체 경로)   ─┘
                                         │
                      /api/entries · /api/entry  (암호 쿠키 필요)
@@ -17,7 +17,7 @@ Vercel Cron (하루 1회, icn1) ─┐
 - **스크랩**: 사이트가 내부적으로 쓰는 AJAX JSON 엔드포인트(`/Ajax/Bible/BodyBibleCont`, `/Ajax/Bible/BodyBible`)를 `fetch`로 직접 호출합니다. 브라우저(Playwright)가 필요 없고, 날짜를 지정해 과거 날짜도 받을 수 있습니다. 출력 마크다운은 예전 Playwright 스크래퍼와 같습니다.
 - **데이터**: Supabase Postgres `qt_entries`(날짜 + 트랙 기본키). RLS를 켜고 정책을 두지 않았으므로 서버의 secret 키로만 접근할 수 있습니다. 본문/해설은 저장소에 두지 않습니다(저작권).
 - **암호**: `SITE_PASSWORD`로 한 번 로그인하면 1년짜리 HttpOnly 쿠키가 발급되어, 같은 브라우저에서는 다시 묻지 않습니다. 암호를 바꾸면 기존 쿠키는 모두 무효가 됩니다.
-- **IP 차단**: `sum.su.or.kr`는 일부 해외/클라우드 IP를 막습니다(GitHub Actions에서 `ERR_CONNECTION_TIMED_OUT`). 그래서 Vercel 함수는 서울(icn1)에서 돌리고, 그래도 막히는 날을 대비해 로컬 PC 자동화를 대체 경로로 둡니다.
+- **IP 차단**: `sum.su.or.kr`는 일부 해외/클라우드 IP를 막습니다(GitHub Actions 미국 러너에서 `ERR_CONNECTION_TIMED_OUT`). Vercel 함수는 서울(icn1)에서 돌며, 2026-10-18 테스트에서 5회 모두 정상 접속됐습니다. 그래도 막히는 날을 대비해 로컬 PC 자동화를 대체 경로로 둡니다(`scrape_runs` 테이블에서 실패 여부 확인).
 
 ## 환경변수
 
@@ -69,7 +69,7 @@ bible_scraper/
 │   ├── entry.js          # GET 날짜별 본문/해설 마크다운
 │   ├── scrape.js         # POST 🔄 버튼: 최근 7일 ~ 이틀 뒤 빠진 날짜 스크랩
 │   └── cron/scrape.js    # Vercel Cron: 최근 30일 ~ 이틀 뒤 빠진 날짜 스크랩
-├── lib/
+├── api/_lib/            # 라우트가 아닌 서버 전용 모듈 (정적 공개 안 됨)
 │   ├── scrape.js         # sum.su.or.kr AJAX 호출 + 마크다운 변환
 │   ├── job.js            # 빠진 날짜 계산 → 스크랩 → upsert → scrape_runs 기록
 │   ├── db.js             # Supabase PostgREST 최소 클라이언트

@@ -1,6 +1,6 @@
-import { requireAuth } from '../lib/auth.js';
-import { listDates } from '../lib/db.js';
-import { TRACKS } from '../lib/scrape.js';
+import { requireAuth } from './_lib/auth.js';
+import { listDates } from './_lib/db.js';
+import { TRACKS } from './_lib/scrape.js';
 
 export default async function handler(req, res) {
   if (!requireAuth(req, res)) return;

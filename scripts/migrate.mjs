@@ -3,7 +3,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { upsertEntries, listDates, getEntry } from '../lib/db.js';
+import { upsertEntries, listDates, getEntry } from '../api/_lib/db.js';
 
 const DATA = path.join(import.meta.dirname, '..', 'data');
 const rows = [];

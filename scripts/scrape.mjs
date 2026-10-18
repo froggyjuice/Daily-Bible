@@ -7,8 +7,8 @@
 //
 // 종료 코드: 0 = 성공, 1 = 실패
 
-import { runScrape } from '../lib/job.js';
-import { addDays, todayKst } from '../lib/scrape.js';
+import { runScrape } from '../api/_lib/job.js';
+import { addDays, todayKst } from '../api/_lib/scrape.js';
 
 const args = process.argv.slice(2);
 const opt = name => {
