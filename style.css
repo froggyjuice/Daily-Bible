@@ -1444,3 +1444,25 @@ html, body {
   }
   .puzzle-modal.active { transform: translateY(0); }
 }
+
+/* ── 맨 아래 저작권 · 제작 안내 (흐린 글씨) ── */
+.site-footer {
+  flex-shrink: 0;
+  padding: 2px 18px 8px;
+  text-align: center;
+  font-size: .64rem;
+  line-height: 1.6;
+  color: var(--text-3);
+  opacity: .75;
+}
+.site-footer a { color: inherit; text-decoration: underline dotted; }
+.site-footer p { margin: 0; }
+@media (max-width: 900px) {
+  .site-footer {
+    font-size: .58rem;
+    padding: 2px 10px calc(4px + env(safe-area-inset-bottom));
+    background: var(--surface);
+  }
+  /* 도크가 아이폰 홈 표시줄 여백을 갖고 있었으므로, 이제 그 여백은 footer 가 가짐 */
+  .dock { padding-bottom: 0; }
+}
