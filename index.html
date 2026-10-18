@@ -104,6 +104,7 @@
               <button class="menu-item" onclick="searchPassage('youtube'); closeMore()" role="menuitem">▶ 유튜브</button>
               <button class="menu-item" onclick="searchPassage('web'); closeMore()" role="menuitem">🔍 검색</button>
               <button class="menu-item" onclick="sharePassage(); closeMore()" role="menuitem">🤝 같이 읽어요</button>
+              <button class="menu-item" onclick="openPuzzle(); closeMore()" role="menuitem">🧩 말씀 퍼즐</button>
               <button class="menu-item" id="btn-godpeople" onclick="openGodpeople(); closeMore()" role="menuitem" style="display:none">📱 갓피플성경</button>
             </div>
           </div>
@@ -194,6 +195,32 @@
       <div class="login-test-result error" id="login-error"></div>
     </div>
   </form>
+
+  <!-- 말씀 퍼즐 -->
+  <div class="login-modal-backdrop" id="puzzle-backdrop" style="display:none" onclick="closePuzzle()"></div>
+  <div class="login-modal puzzle-modal" id="puzzle-modal" style="display:none" role="dialog" aria-label="말씀 퍼즐">
+    <div class="login-modal-header">
+      <h3>🧩 말씀 퍼즐</h3>
+      <button class="modal-close" onclick="closePuzzle()" aria-label="닫기">✕</button>
+    </div>
+    <div class="login-modal-body puzzle-body">
+      <div class="puzzle-modes" role="tablist">
+        <button class="puzzle-mode active" id="pz-mode-words"  onclick="setPuzzleMode('words')"  role="tab">조각 맞추기</button>
+        <button class="puzzle-mode"        id="pz-mode-verses" onclick="setPuzzleMode('verses')" role="tab">순서 맞추기</button>
+      </div>
+      <div class="puzzle-ref" id="pz-ref"></div>
+      <p class="puzzle-guide" id="pz-guide"></p>
+      <div class="puzzle-answer" id="pz-answer"></div>
+      <div class="puzzle-pool" id="pz-pool"></div>
+      <div class="puzzle-foot">
+        <span class="puzzle-status" id="pz-status"></span>
+        <span class="puzzle-actions">
+          <button class="chip" id="pz-hint" onclick="puzzleHint()">💡 힌트</button>
+          <button class="chip" onclick="startPuzzle()">🔀 다른 문제</button>
+        </span>
+      </div>
+    </div>
+  </div>
 
   <!-- 앱 설치 가이드 -->
   <div class="login-modal-backdrop" id="install-backdrop" style="display:none" onclick="closeInstallGuide()"></div>
