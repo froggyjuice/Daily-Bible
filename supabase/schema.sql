@@ -45,14 +45,3 @@ create index if not exists qt_comments_date on public.qt_comments (qt_date, crea
 
 alter table public.qt_comments enable row level security;
 revoke all on public.qt_comments from anon, authenticated;
-
--- ── 유튜브 검색 결과 캐시 (날짜별 — API 할당량 절약) ──
-create table if not exists public.qt_videos (
-  qt_date    date        primary key,
-  query      text        not null,
-  items      jsonb       not null,            -- [{ id, title, channel, thumb, published }]
-  fetched_at timestamptz not null default now()
-);
-
-alter table public.qt_videos enable row level security;
-revoke all on public.qt_videos from anon, authenticated;

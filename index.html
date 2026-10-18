@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko" data-theme="autumn">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -35,9 +35,10 @@
 
     <!-- 테마 토글 -->
     <div class="theme-toggle-group" id="theme-group" role="group" aria-label="화면 테마 선택">
-      <button class="theme-btn" id="theme-btn-dark"   onclick="setTheme('dark')"   title="다크 모드">🌙</button>
-      <button class="theme-btn" id="theme-btn-light"  onclick="setTheme('light')"  title="라이트 모드">☀️</button>
-      <button class="theme-btn" id="theme-btn-system" onclick="setTheme('system')" title="시스템 설정">⚙</button>
+      <button class="theme-btn" id="theme-btn-spring" onclick="setTheme('spring')" title="봄">🌸</button>
+      <button class="theme-btn" id="theme-btn-summer" onclick="setTheme('summer')" title="여름">🌿</button>
+      <button class="theme-btn" id="theme-btn-autumn" onclick="setTheme('autumn')" title="가을">🍁</button>
+      <button class="theme-btn" id="theme-btn-winter" onclick="setTheme('winter')" title="겨울">❄️</button>
     </div>
   </header>
 
@@ -81,9 +82,9 @@
         <div class="tab-meta" id="content-meta">날짜를 선택하세요</div>
         <div class="tabs">
           <button class="view-btn" id="btn-refresh" onclick="refreshData()" title="빠진 날짜 스크랩">🔄️</button>
-          <button class="tab-btn active" id="tab-bonmun"  onclick="switchTab('bonmun')">📖 본문</button>
-          <button class="tab-btn"        id="tab-haeseol" onclick="switchTab('haeseol')">📝 해설</button>
-          <button class="tab-btn"        id="tab-nanum"   onclick="switchTab('nanum')">💬 나눔<span class="tab-badge" id="comment-badge"></span></button>
+          <!-- 좁은 화면: 책을 넘기듯 본문 ↔ 해설 쪽 이동 -->
+          <button class="tab-btn page-pill active" id="pill-bonmun"  onclick="goPage(0)">📖 본문</button>
+          <button class="tab-btn page-pill"        id="pill-haeseol" onclick="goPage(1)">📝 해설</button>
         </div>
       </div>
       <div class="refresh-status" id="refresh-status" style="display:none"></div>
@@ -91,7 +92,7 @@
       <!-- 본문 바로가기 (날짜 선택 시 표시) -->
       <div class="passage-actions" id="passage-actions" style="display:none">
         <button class="chip" id="btn-audio" onclick="toggleAudio()" title="성서유니온 공식 오디오 (본문낭독 + 해설)" style="display:none">🎧 듣기</button>
-        <button class="chip" onclick="openVideos()" title="본문 관련 유튜브 영상 보기">▶ 유튜브</button>
+        <button class="chip" onclick="searchPassage('youtube')" title="유튜브에서 본문 찾기">▶ 유튜브</button>
         <button class="chip" onclick="searchPassage('web')" title="웹에서 본문 검색">🔍 검색</button>
         <button class="chip" onclick="sharePassage()" title="이 본문 링크 공유">🤝 같이 읽어요</button>
         <button class="chip" id="btn-godpeople" onclick="openGodpeople()" title="갓피플성경 앱에서 읽기" style="display:none">📱 갓피플성경</button>
@@ -103,40 +104,49 @@
         <div class="audio-speaker" id="audio-speaker"></div>
       </div>
 
-      <div class="content-panels">
-        <div class="panel active" id="panel-bonmun">
+      <!-- 책 펼침면: 왼쪽 쪽 = 본문, 오른쪽 쪽 = 해설 (좁은 화면에서는 옆으로 넘김) -->
+      <div class="book" id="book">
+        <section class="page page-left" id="page-bonmun" aria-label="본문">
+          <div class="page-label">📖 본문</div>
           <div class="empty-state" id="empty-bonmun">
             <div class="empty-icon">📖</div>
             <p>좌측에서 날짜를 선택하세요</p>
           </div>
           <div class="markdown-body" id="bonmun-body"></div>
-        </div>
-        <div class="panel" id="panel-haeseol">
+        </section>
+        <section class="page page-right" id="page-haeseol" aria-label="해설">
+          <div class="page-label">📝 해설</div>
           <div class="empty-state" id="empty-haeseol">
             <div class="empty-icon">📝</div>
             <p>좌측에서 날짜를 선택하세요</p>
           </div>
           <div class="markdown-body" id="haeseol-body"></div>
-        </div>
-        <div class="panel" id="panel-nanum">
-          <div class="nanum">
-            <section class="nanum-section">
-              <h3 class="nanum-title">✏️ 내 메모 <small>이 브라우저에만 저장돼요</small></h3>
-              <textarea class="nanum-input memo-input" id="memo-input" rows="6"
-                        placeholder="오늘 말씀에서 받은 은혜, 적용할 점을 적어보세요" oninput="onMemoInput()" disabled></textarea>
-              <div class="nanum-hint" id="memo-status"></div>
-            </section>
+        </section>
+      </div>
 
-            <section class="nanum-section">
-              <h3 class="nanum-title">💬 댓글 <small id="comment-count"></small></h3>
-              <ul class="comment-list" id="comment-list"></ul>
-              <form class="comment-form" id="comment-form" onsubmit="submitComment(event)">
-                <input class="nanum-input" id="comment-nick" maxlength="20" placeholder="닉네임" required>
-                <textarea class="nanum-input" id="comment-body" maxlength="500" rows="3" placeholder="함께 나누고 싶은 이야기를 남겨주세요" required></textarea>
-                <button type="submit" class="login-btn primary" id="comment-submit">등록</button>
-              </form>
-            </section>
-          </div>
+      <!-- 아래 도크: 메모 / 나눔 (누를 때마다 열고 닫음) -->
+      <div class="dock" id="dock">
+        <div class="dock-bar">
+          <button class="dock-btn" id="dock-btn-memo"  onclick="toggleDock('memo')">✏️ 메모 <span class="dock-chev">▴</span></button>
+          <button class="dock-btn" id="dock-btn-nanum" onclick="toggleDock('nanum')">💬 나눔<span class="tab-badge" id="comment-badge"></span> <span class="dock-chev">▴</span></button>
+        </div>
+        <div class="dock-drawer">
+          <section class="nanum-section dock-section" id="dock-memo">
+            <h3 class="nanum-title">✏️ 내 메모 <small>이 브라우저에만 저장돼요</small></h3>
+            <textarea class="nanum-input memo-input" id="memo-input" rows="5"
+                      placeholder="오늘 말씀에서 받은 은혜, 적용할 점을 적어보세요" oninput="onMemoInput()" disabled></textarea>
+            <div class="nanum-hint" id="memo-status"></div>
+          </section>
+
+          <section class="nanum-section dock-section" id="dock-nanum">
+            <h3 class="nanum-title">💬 나눔 <small id="comment-count"></small></h3>
+            <ul class="comment-list" id="comment-list"></ul>
+            <form class="comment-form" id="comment-form" onsubmit="submitComment(event)">
+              <input class="nanum-input" id="comment-nick" maxlength="20" placeholder="닉네임" required>
+              <textarea class="nanum-input" id="comment-body" maxlength="500" rows="3" placeholder="함께 나누고 싶은 이야기를 남겨주세요" required></textarea>
+              <button type="submit" class="login-btn primary" id="comment-submit">등록</button>
+            </form>
+          </section>
         </div>
       </div>
     </main>
@@ -158,18 +168,6 @@
       <div class="login-test-result error" id="login-error"></div>
     </div>
   </form>
-
-  <!-- 유튜브 영상 (화면 안 재생) -->
-  <div class="login-modal-backdrop" id="video-backdrop" style="display:none" onclick="closeVideos()"></div>
-  <div class="video-sheet" id="video-sheet" style="display:none" role="dialog" aria-label="유튜브 영상">
-    <div class="video-sheet-header">
-      <span class="video-query" id="video-query"></span>
-      <button class="video-close" onclick="closeVideos()" aria-label="닫기">✕</button>
-    </div>
-    <div class="video-frame"><iframe id="video-iframe" title="유튜브 영상" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
-    <ul class="video-list" id="video-list"></ul>
-    <a class="video-more" id="video-more" target="_blank" rel="noopener">유튜브에서 더 보기 ↗</a>
-  </div>
 
   <div class="toast-container" id="toast-container"></div>
 

@@ -6,7 +6,6 @@
 // ── 전역 상태 ────────────────────────────────
 let currentVersion = 'main';          // 'main' | 'soon'
 let currentDate    = null;
-let currentTab     = 'bonmun';
 
 // 캘린더 상태 (KST 기준)
 const _kstNow = new Date(Date.now() + 9 * 3600 * 1000);
@@ -60,6 +59,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (isMobile()) document.getElementById('btn-godpeople').style.display = '';
   document.addEventListener('selectionchange', onSelectionChange);
+  document.getElementById('book').addEventListener('scroll', syncPagePills, { passive: true });
+  toggleDock(null);
 
   await loadEntries();
 });
@@ -68,37 +69,35 @@ window.addEventListener('DOMContentLoaded', async () => {
 // ═══════════════════════════════════════════
 //  테마
 // ═══════════════════════════════════════════
+const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
+
+// 3~5월 봄, 6~8월 여름, 9~11월 가을, 12~2월 겨울 (KST)
+function currentSeason() {
+  const m = new Date(Date.now() + 9 * 3600 * 1000).getUTCMonth() + 1;
+  return m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter';
+}
+
 function initTheme() {
-  const saved = localStorage.getItem('theme') || 'dark';
-  applyTheme(saved, false);
+  let saved = null;
+  try { saved = localStorage.getItem('theme'); } catch {}
+  // 예전 설정(다크/라이트/시스템) 이어받기
+  const legacy = { dark: 'winter', light: 'autumn', system: null };
+  if (saved in legacy) saved = legacy[saved];
+  applyTheme(SEASONS.includes(saved) ? saved : currentSeason(), false);
 }
 
 function setTheme(theme) {
-  localStorage.setItem('theme', theme);
+  try { localStorage.setItem('theme', theme); } catch {}
   applyTheme(theme, true);
 }
 
 function applyTheme(theme, animate) {
   const html = document.documentElement;
   if (!animate) html.style.transition = 'none';
-
-  if (theme === 'system') {
-    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    html.setAttribute('data-theme', dark ? 'dark' : 'light');
-  } else {
-    html.setAttribute('data-theme', theme);
-  }
-
+  html.setAttribute('data-theme', theme);
   if (!animate) { void html.offsetHeight; html.style.transition = ''; }
-
-  ['dark','light','system'].forEach(t =>
-    document.getElementById(`theme-btn-${t}`)?.classList.toggle('active', t === theme)
-  );
+  SEASONS.forEach(t => document.getElementById(`theme-btn-${t}`)?.classList.toggle('active', t === theme));
 }
-
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-  if (localStorage.getItem('theme') === 'system') applyTheme('system', true);
-});
 
 
 // ═══════════════════════════════════════════
@@ -266,6 +265,7 @@ async function selectDate(dateStr) {
   clearPanels();
   clearVerseSelection();
   hideHighlightBar();
+  resetPages();
   document.getElementById('content-meta').textContent = formatDateKo(dateStr);
   loadMemo(dateStr);
   loadComments(dateStr);
@@ -512,16 +512,44 @@ function clearPanels() {
 
 
 // ═══════════════════════════════════════════
-//  탭 전환
+//  책 펼침면 — 넓은 화면은 양쪽 쪽, 좁은 화면은 옆으로 넘김
 // ═══════════════════════════════════════════
-function switchTab(tab) {
-  currentTab = tab;
-  if (tab !== 'haeseol') hideHighlightBar();
-  if (tab !== 'bonmun') clearVerseSelection();
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById(`tab-${tab}`).classList.add('active');
-  document.getElementById(`panel-${tab}`).classList.add('active');
+function goPage(idx) {
+  const book = document.getElementById('book');
+  book.scrollTo({ left: idx * book.clientWidth, behavior: 'smooth' });
+}
+
+function syncPagePills() {
+  const book = document.getElementById('book');
+  const idx = book.clientWidth ? Math.round(book.scrollLeft / book.clientWidth) : 0;
+  document.getElementById('pill-bonmun').classList.toggle('active', idx === 0);
+  document.getElementById('pill-haeseol').classList.toggle('active', idx === 1);
+}
+
+// 날짜를 바꾸면 두 쪽 모두 맨 위, 좁은 화면은 본문 쪽부터
+function resetPages() {
+  const book = document.getElementById('book');
+  book.scrollLeft = 0;
+  document.getElementById('page-bonmun').scrollTop = 0;
+  document.getElementById('page-haeseol').scrollTop = 0;
+  syncPagePills();
+}
+
+
+// ═══════════════════════════════════════════
+//  아래 도크 — 메모 / 나눔 토글 (같은 버튼을 다시 누르면 닫힘)
+// ═══════════════════════════════════════════
+let dockOpen = null;  // null | 'memo' | 'nanum'
+
+function toggleDock(which) {
+  dockOpen = dockOpen === which ? null : which;
+  const dock = document.getElementById('dock');
+  dock.classList.toggle('open', !!dockOpen);
+  ['memo', 'nanum'].forEach(k => {
+    document.getElementById(`dock-btn-${k}`).classList.toggle('active', dockOpen === k);
+    document.getElementById(`dock-${k}`).style.display = dockOpen === k ? '' : 'none';
+  });
+  if (dockOpen === 'memo') document.getElementById('memo-input').focus({ preventScroll: true });
 }
 
 
@@ -772,7 +800,7 @@ let hlHideTimer = null;
 function onSelectionChange() {
   const sel = window.getSelection();
   const body = document.getElementById('haeseol-body');
-  if (sel.rangeCount && !sel.isCollapsed && currentTab === 'haeseol') {
+  if (sel.rangeCount && !sel.isCollapsed) {
     const r = sel.getRangeAt(0);
     if (body.contains(r.commonAncestorContainer)) {
       const s = textOffset(body, r.startContainer, r.startOffset);
@@ -1011,89 +1039,6 @@ function toggleAudio() {
   renderAudio();
   if (audioOpen) audio.play().catch(() => {});
   else audio.pause();
-}
-
-
-// ═══════════════════════════════════════════
-//  유튜브 영상 — 화면 안에서 재생 (/api/videos 가 검색·캐시)
-// ═══════════════════════════════════════════
-async function openVideos() {
-  if (!currentDate) return;
-  const dateStr = currentDate;
-  let data;
-  try {
-    data = await apiFetch(`/api/videos?date=${dateStr}`, undefined, true);
-  } catch (e) {
-    if (e instanceof AuthRequired) return;
-    data = { error: e.message };
-  }
-  if (currentDate !== dateStr) return;
-  if (!data.items) {
-    // API 키 없음/할당량 초과 → 예전처럼 유튜브 검색을 새 창으로
-    searchPassage('youtube');
-    return;
-  }
-  if (!data.items.length) {
-    showToast('관련 영상을 찾지 못했어요 — 유튜브에서 직접 찾아볼게요', 'info');
-    searchPassage('youtube');
-    return;
-  }
-
-  document.getElementById('qt-audio').pause();
-  document.getElementById('video-query').textContent = `🔎 ${data.query}`;
-  document.getElementById('video-more').href =
-    `https://www.youtube.com/results?search_query=${encodeURIComponent(data.query)}`;
-
-  const list = document.getElementById('video-list');
-  list.innerHTML = '';
-  data.items.forEach((v, i) => {
-    const li = document.createElement('li');
-    li.className = 'video-item';
-    li.onclick = () => playVideo(v.id, li);
-    const img = document.createElement('img');
-    img.src = v.thumb; img.alt = ''; img.loading = 'lazy';
-    const meta = document.createElement('div');
-    meta.className = 'video-meta';
-    const title = document.createElement('div');
-    title.className = 'video-title';
-    title.textContent = decodeEntities(v.title);
-    const ch = document.createElement('div');
-    ch.className = 'video-channel';
-    ch.textContent = `${decodeEntities(v.channel)} · ${new Date(v.published).toLocaleDateString('ko-KR')}`;
-    meta.append(title, ch);
-    li.append(img, meta);
-    list.appendChild(li);
-    if (i === 0) playVideo(v.id, li);
-  });
-
-  const sheet = document.getElementById('video-sheet');
-  const backdrop = document.getElementById('video-backdrop');
-  sheet.style.display = 'flex';
-  backdrop.style.display = 'block';
-  setTimeout(() => { sheet.classList.add('active'); backdrop.classList.add('active'); }, 10);
-}
-
-function playVideo(id, li) {
-  document.getElementById('video-iframe').src =
-    `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&playsinline=1`;
-  document.querySelectorAll('.video-item.active').forEach(el => el.classList.remove('active'));
-  li?.classList.add('active');
-}
-
-function closeVideos() {
-  const sheet = document.getElementById('video-sheet');
-  const backdrop = document.getElementById('video-backdrop');
-  document.getElementById('video-iframe').src = 'about:blank';  // 재생 중지
-  sheet.classList.remove('active');
-  backdrop.classList.remove('active');
-  setTimeout(() => { sheet.style.display = 'none'; backdrop.style.display = 'none'; }, 250);
-}
-
-// YouTube API 제목에는 &quot; &#39; 같은 엔티티가 섞여 옴
-function decodeEntities(s) {
-  const t = document.createElement('textarea');
-  t.innerHTML = s || '';
-  return t.value;
 }
 
 

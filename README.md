@@ -17,10 +17,12 @@ Vercel Cron (하루 1회, icn1) ─┐
 - **스크랩**: 사이트가 내부적으로 쓰는 AJAX JSON 엔드포인트(`/Ajax/Bible/BodyBibleCont`, `/Ajax/Bible/BodyBible`)를 `fetch`로 직접 호출합니다. 브라우저(Playwright)가 필요 없고, 날짜를 지정해 과거 날짜도 받을 수 있습니다. 출력 마크다운은 예전 Playwright 스크래퍼와 같습니다.
 - **데이터**: Supabase Postgres `qt_entries`(날짜 + 트랙 기본키). RLS를 켜고 정책을 두지 않았으므로 서버의 secret 키로만 접근할 수 있습니다. 본문/해설은 저장소에 두지 않습니다(저작권).
 - **공개 범위**: KST 기준 오늘 본문까지만 저장·공개합니다. Cron 은 자정 직후(00:05 KST, Hobby 플랜이라 최대 59분 지연)에 돌고, 그 전에 누가 먼저 접속하면 `/api/entries` 가 오늘자를 즉석에서 받아옵니다.
-- **나눔 탭**: 날짜별 메모(이 브라우저 localStorage)와 댓글(Supabase `qt_comments`, 닉네임만, 브라우저 토큰으로 본인 댓글만 삭제). 매일성경/순은 같은 성경 본문이라 메모·댓글은 날짜 단위로 공유됩니다.
+- **책 펼침면**: 본문(왼쪽 쪽)과 해설(오른쪽 쪽)을 한 화면에. 900px 미만에서는 한 쪽씩 옆으로 넘기고, 위의 📖 본문 / 📝 해설 버튼으로 이동.
+- **메모 / 나눔 도크**: 책 아래 ✏️ 메모 · 💬 나눔 버튼으로 열고 닫음. 메모는 날짜별로 이 브라우저(localStorage)에, 나눔(댓글)은 Supabase `qt_comments` 에 저장(닉네임만, 브라우저 토큰으로 본인 댓글만 삭제). 매일성경/순은 같은 성경 본문이라 날짜 단위로 공유.
+- **계절 테마**: 🌸 봄 / 🌿 여름 / 🍁 가을 / ❄️ 겨울(어두운 테마). 고르지 않으면 지금 계절(KST 월 기준).
 - **형광펜**: 본문은 절을 탭해 선택 → 하단 바 🖍, 해설은 글자를 드래그 → 🖍. localStorage 에 트랙·날짜별로 저장.
 - **공식 오디오**: 🎧 듣기 — 성서유니온 mp3(본문낭독 + 오디오해설)를 화면 안에서 재생. 주소와 낭독자는 스크랩 때 `BodyMatterDetail` 에서 함께 저장.
-- **바로가기**: ▶ 유튜브(키가 있으면 `/api/videos` 가 날짜별로 검색·캐시해 화면 안에서 재생) / 🔍 웹 검색 / 🤝 같이 읽어요(공유 링크 `?date=YYYY-MM-DD&v=soon`) / 📱 갓피플성경(모바일 전용 — 본문 위치를 복사한 뒤 앱 실행. 특정 본문으로 바로 가는 공개 링크가 없음).
+- **바로가기**: ▶ 유튜브 / 🔍 웹 검색 / 🤝 같이 읽어요(공유 링크 `?date=YYYY-MM-DD&v=soon`) / 📱 갓피플성경(모바일 전용 — 본문 위치를 복사한 뒤 앱 실행. 특정 본문으로 바로 가는 공개 링크가 없음).
 - **암호**: `SITE_PASSWORD`로 한 번 로그인하면 1년짜리 HttpOnly 쿠키가 발급되어, 같은 브라우저에서는 다시 묻지 않습니다. 암호를 바꾸면 기존 쿠키는 모두 무효가 됩니다.
 - **IP 차단**: `sum.su.or.kr`는 일부 해외/클라우드 IP를 막습니다(GitHub Actions 미국 러너에서 `ERR_CONNECTION_TIMED_OUT`). Vercel 함수는 서울(icn1)에서 돌며, 2026-10-18 테스트에서 5회 모두 정상 접속됐습니다. 그래도 막히는 날을 대비해 로컬 PC 자동화를 대체 경로로 둡니다(`scrape_runs` 테이블에서 실패 여부 확인).
 
@@ -35,7 +37,6 @@ Vercel Cron (하루 1회, icn1) ─┐
 | `SITE_PASSWORD` | 사이트 공유 암호 |
 | `AUTH_SECRET` | 쿠키 서명용 무작위 문자열 |
 | `CRON_SECRET` | Vercel Cron 호출 인증 |
-| `YOUTUBE_API_KEY` | (선택) YouTube Data API v3 키 — ▶ 유튜브 영상을 화면 안에서 재생. 없으면 새 창 검색 |
 
 ## 처음 설정
 
@@ -74,7 +75,6 @@ bible_scraper/
 │   ├── entries.js        # GET 날짜 목록
 │   ├── entry.js          # GET 날짜별 본문/해설 마크다운
 │   ├── comments.js       # GET/POST/DELETE 날짜별 댓글
-│   ├── videos.js         # GET 날짜별 유튜브 영상 (YouTube Data API + qt_videos 캐시)
 │   ├── scrape.js         # POST 🔄 버튼: 최근 7일 ~ 오늘 빠진 날짜 스크랩
 │   └── cron/scrape.js    # Vercel Cron: 최근 30일 ~ 오늘 빠진 날짜 스크랩
 ├── api/_lib/            # 라우트가 아닌 서버 전용 모듈 (정적 공개 안 됨)
