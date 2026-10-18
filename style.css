@@ -58,9 +58,9 @@
 
   --header-bg:   linear-gradient(90deg,#e8f3cf 0%,#fbf6cf 100%);
   --scrollbar:   #cadaa3;
-  --page:        #fffdf0;
+  --page:        #fbfdf4;   /* 노란 형광펜이 묻히지 않게 종이는 연두빛 흰색 */
   --page-shade:  rgba(110,140,30,.13);
-  --hl:          rgba(255,214,0,.55);
+  --hl:          rgba(255,200,0,.62);
 }
 
 /* ── 여름 — 하늘 · 연주황 · 살구 🐳 ─────────── */
