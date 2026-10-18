@@ -183,9 +183,9 @@ async function loadEntries() {
 
     renderSidebar(entries);
 
-    // 최신 날짜 자동 선택
+    // 오늘 자동 선택 (Cron 이 이틀 뒤까지 미리 받아 두므로 entries[0] 은 미래일 수 있음)
     if (entries.length > 0) {
-      await selectDate(entries[0]);
+      await selectDate(entrySet.has(todayKST()) ? todayKST() : entries[0]);
     } else {
       clearPanels();
     }
@@ -222,6 +222,7 @@ function renderSidebar(entries) {
     let sub = formatDateKo(dateStr);
     if (dateStr === today)          sub = '오늘';
     else if (dateStr === yesterday) sub = '어제';
+    else if (dateStr === offsetDate(today, 1)) sub = '내일';
 
     return `
       <li class="date-item" id="item-${dateStr}" onclick="selectDate('${dateStr}')">
