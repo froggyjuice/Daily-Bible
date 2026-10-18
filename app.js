@@ -278,7 +278,7 @@ async function selectDate(dateStr) {
   if (currentView === 'calendar') renderCalendar(calYear, calMonth);
 
   try {
-    const data = await apiFetch(`/api/entry?track=${currentVersion}&date=${dateStr}`);
+    const data = await apiFetch(`/api/entry?track=${currentVersion}&date=${dateStr}`, { cache: 'no-cache' });
     if (currentDate !== dateStr) return;  // 그사이 다른 날짜를 눌렀으면 버림
     parseAndRender(data.content);
     applyHighlights();
