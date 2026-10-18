@@ -34,61 +34,61 @@
   --hl:          rgba(255,221,0,.55);
 }
 
-/* ── 봄 — 벚꽃 ─────────────────────────────── */
+/* ── 봄 — 연두 · 초록 · 노랑 🌼 ─────────────── */
 [data-theme="spring"] {
-  --bg:          #fbf3f5;
-  --surface:     #f6e7ec;
-  --surface-2:   #efdae1;
-  --border:      #e2c5cf;
-  --border-light:#ebd3db;
+  --bg:          #f6f9ec;
+  --surface:     #edf4d9;
+  --surface-2:   #e2edc6;
+  --border:      #cadaa3;
+  --border-light:#d9e6b8;
 
-  --gold:        #c0587a;
-  --gold-light:  #9c3a5c;
-  --gold-dim:    #dc93ac;
-  --gold-glow:   rgba(192,88,122,.13);
+  --gold:        #5a9a2a;
+  --gold-light:  #3d7615;
+  --gold-dim:    #a8cf6a;
+  --gold-glow:   rgba(90,154,42,.14);
   --on-accent:   #ffffff;
 
-  --text:        #2a1a20;
-  --text-2:      #6a4c56;
-  --text-3:      #a88a95;
+  --text:        #1f2a12;
+  --text-2:      #55633f;
+  --text-3:      #93a07a;
 
-  --green:       #4f8a5b;
+  --green:       #3d8a2a;
   --red:         #c03838;
   --blue:        #4f7cae;
 
-  --header-bg:   linear-gradient(90deg,#f6e1e8 0%,#fcf0f3 100%);
-  --scrollbar:   #e2c5cf;
-  --page:        #fffafb;
-  --page-shade:  rgba(150,60,90,.11);
-  --hl:          rgba(255,221,0,.55);
+  --header-bg:   linear-gradient(90deg,#e8f3cf 0%,#fbf6cf 100%);
+  --scrollbar:   #cadaa3;
+  --page:        #fffdf0;
+  --page-shade:  rgba(110,140,30,.13);
+  --hl:          rgba(255,214,0,.55);
 }
 
-/* ── 여름 — 초록 숲 · 바다 ─────────────────── */
+/* ── 여름 — 하늘 · 연주황 · 살구 🐳 ─────────── */
 [data-theme="summer"] {
-  --bg:          #eef6f2;
-  --surface:     #e1efe8;
-  --surface-2:   #d3e7dc;
-  --border:      #b6d4c4;
-  --border-light:#c8e0d3;
+  --bg:          #eff7fc;
+  --surface:     #e1f0fa;
+  --surface-2:   #d2e7f6;
+  --border:      #b3d4ec;
+  --border-light:#c6dff1;
 
-  --gold:        #23805f;
-  --gold-light:  #17634a;
-  --gold-dim:    #6db89a;
-  --gold-glow:   rgba(35,128,95,.13);
+  --gold:        #e27a3e;
+  --gold-light:  #b85a22;
+  --gold-dim:    #f5b78f;
+  --gold-glow:   rgba(226,122,62,.15);
   --on-accent:   #ffffff;
 
-  --text:        #13241d;
-  --text-2:      #446457;
-  --text-3:      #84a396;
+  --text:        #142433;
+  --text-2:      #4a6275;
+  --text-3:      #8aa1b3;
 
-  --green:       #2a8a4a;
+  --green:       #2a8a6a;
   --red:         #c03838;
-  --blue:        #2a7ab0;
+  --blue:        #2f86c8;
 
-  --header-bg:   linear-gradient(90deg,#d9ede2 0%,#edf6f1 100%);
-  --scrollbar:   #b6d4c4;
-  --page:        #fafdfb;
-  --page-shade:  rgba(30,90,70,.11);
+  --header-bg:   linear-gradient(90deg,#d5ebfa 0%,#fde6d6 100%);
+  --scrollbar:   #b3d4ec;
+  --page:        #fffaf6;
+  --page-shade:  rgba(40,110,170,.11);
   --hl:          rgba(255,221,0,.55);
 }
 

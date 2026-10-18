@@ -86,7 +86,7 @@ function initTheme() {
   applyTheme(SEASONS.includes(saved) ? saved : currentSeason(), false);
 }
 
-const SEASON_LABEL = { spring: '🌸 봄', summer: '🌿 여름', autumn: '🍁 가을', winter: '❄️ 겨울' };
+const SEASON_LABEL = { spring: '🌼 봄', summer: '🐳 여름', autumn: '🍁 가을', winter: '❄️ 겨울' };
 
 // 좁은 화면은 지금 계절 버튼 하나만 보이므로, 누르면 다음 계절로 넘어감
 function pickTheme(theme) {
