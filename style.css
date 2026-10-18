@@ -1276,3 +1276,58 @@ html, body {
 @media (max-width: 768px) {
   .theme-toggle-group .theme-btn:not(.active) { display: none; }
 }
+
+/* ── 앱 설치 (PWA) ─────────────────────────── */
+.install-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 24px;
+  background: var(--gold-glow);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.install-banner-text { flex: 1; min-width: 0; font-size: .8rem; color: var(--text); }
+.install-close, .modal-close {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 26px; height: 26px;
+  color: var(--text-2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.install-close:hover, .modal-close:hover { color: var(--red); border-color: var(--red); }
+.sidebar-install {
+  flex-shrink: 0;
+  margin: 8px;
+  padding: 9px;
+  background: var(--surface-2);
+  border: 1px dashed var(--gold-dim);
+  border-radius: var(--radius-sm);
+  color: var(--gold-light);
+  font-size: .8rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.sidebar-install:hover { background: var(--gold-glow); }
+
+.install-modal { width: 440px; max-height: 86dvh; }
+.install-modal .login-modal-header { flex-shrink: 0; }
+.install-modal .login-modal-body { overflow-y: auto; }
+.install-os {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.install-os.current { border-color: var(--gold); background: var(--gold-glow); }
+.install-os h4 { font-size: .84rem; color: var(--gold-light); margin-bottom: 6px; }
+.install-os ol { padding-left: 18px; }
+.install-os li { font-size: .82rem; line-height: 1.7; color: var(--text); }
+.install-os b { color: var(--gold-light); }
+.install-note { margin: 4px 0 0; }
+
+@media (max-width: 768px) {
+  .install-banner { padding: 7px 12px; }
+}

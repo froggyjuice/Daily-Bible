@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>매일성경</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <!-- 앱 설치 (PWA) -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <meta name="theme-color" content="#f7f2e8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="매일성경" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="description" content="성서유니온 매일성경 본문 & 해설 자동 스크랩 대시보드" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -74,6 +82,8 @@
           </div>
           <div class="cal-grid" id="cal-grid"></div>
         </div>
+
+        <button class="sidebar-install" id="btn-install" onclick="installApp()" style="display:none">📲 앱으로 설치하기</button>
       </div>
     </aside>
 
@@ -88,6 +98,13 @@
         </div>
       </div>
       <div class="refresh-status" id="refresh-status" style="display:none"></div>
+
+      <!-- 앱 설치 안내 (설치 전 + 닫지 않았을 때만) -->
+      <div class="install-banner" id="install-banner" style="display:none">
+        <span class="install-banner-text">📲 홈 화면에 설치하면 앱처럼 바로 열려요</span>
+        <button class="chip" onclick="installApp()">설치하기</button>
+        <button class="install-close" onclick="dismissInstallBanner()" aria-label="안내 닫기">✕</button>
+      </div>
 
       <!-- 본문 바로가기 (날짜 선택 시 표시) -->
       <div class="passage-actions" id="passage-actions" style="display:none">
@@ -175,6 +192,45 @@
       <div class="login-test-result error" id="login-error"></div>
     </div>
   </form>
+
+  <!-- 앱 설치 가이드 -->
+  <div class="login-modal-backdrop" id="install-backdrop" style="display:none" onclick="closeInstallGuide()"></div>
+  <div class="login-modal install-modal" id="install-modal" style="display:none" role="dialog" aria-label="앱 설치 방법">
+    <div class="login-modal-header">
+      <h3>📲 앱으로 설치하기</h3>
+      <button class="modal-close" onclick="closeInstallGuide()" aria-label="닫기">✕</button>
+    </div>
+    <div class="login-modal-body" id="install-steps">
+      <section class="install-os" data-os="android">
+        <h4>🤖 안드로이드 (Chrome · 삼성 인터넷)</h4>
+        <ol>
+          <li><b>📲 설치하기</b> 버튼을 누르고 <b>설치</b>를 고릅니다.</li>
+          <li>버튼을 눌러도 창이 안 뜨면 브라우저 메뉴 <b>⋮</b> → <b>앱 설치</b> 또는 <b>홈 화면에 추가</b>.</li>
+          <li>홈 화면의 <b>매일성경</b> 아이콘으로 엽니다.</li>
+        </ol>
+      </section>
+      <section class="install-os" data-os="ios">
+        <h4>🍎 아이폰 · 아이패드 (Safari)</h4>
+        <ol>
+          <li><b>Safari</b>로 이 사이트를 엽니다. (카톡 안에서 열었다면 <b>⋯ → Safari로 열기</b>)</li>
+          <li>아래쪽 <b>공유 버튼</b>(네모에 위쪽 화살표)을 누릅니다.</li>
+          <li><b>홈 화면에 추가</b> → 오른쪽 위 <b>추가</b>.</li>
+        </ol>
+      </section>
+      <section class="install-os" data-os="desktop">
+        <h4>💻 PC · 노트북 (Chrome · Edge)</h4>
+        <ol>
+          <li><b>📲 설치하기</b> 버튼을 누르거나, 주소창 오른쪽의 <b>설치 아이콘</b>(모니터 모양)을 누릅니다.</li>
+          <li><b>설치</b>를 누르면 바탕화면 · 시작 메뉴(맥은 응용 프로그램)에 생깁니다.</li>
+          <li>맥 Safari는 메뉴 <b>파일 → Dock에 추가</b>.</li>
+        </ol>
+      </section>
+      <p class="login-help install-note">
+        설치한 앱은 브라우저와 저장 공간이 따로일 수 있어요(특히 아이폰). 처음 한 번은 <b>암호를 다시 입력</b>해야 하고,
+        브라우저에 적어 둔 <b>메모 · 책갈피는 앱으로 옮겨지지 않아요</b>.
+      </p>
+    </div>
+  </div>
 
   <div class="toast-container" id="toast-container"></div>
 

@@ -59,6 +59,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (isMobile()) document.getElementById('btn-godpeople').style.display = '';
   migrateHighlights();
+  initInstall();
   document.getElementById('book').addEventListener('scroll', syncPagePills, { passive: true });
   toggleDock(null);
 
@@ -108,6 +109,9 @@ function applyTheme(theme, animate) {
   if (!animate) html.style.transition = 'none';
   html.setAttribute('data-theme', theme);
   if (!animate) { void html.offsetHeight; html.style.transition = ''; }
+  // 휴대폰 상단 상태바 / 설치 앱 제목줄 색도 계절에 맞춤
+  document.querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', getComputedStyle(html).getPropertyValue('--bg').trim());
   SEASONS.forEach(t => document.getElementById(`theme-btn-${t}`)?.classList.toggle('active', t === theme));
 }
 
@@ -1105,26 +1109,32 @@ function searchPassage(kind) {
   window.open(url, '_blank', 'noopener');
 }
 
-// 공유 문구: 권유 멘트 + 날짜·제목·본문 위치 + 본문 전체 + 링크
+// 공유 문구:
+//   📖 오늘 말씀, 같이 읽어요!
+//   10/18 (일) 매일성경 「차별이라는 죄」
+//   야고보서 2:1-13
+//   (빈 줄)
+//   절 내용 — 고른 절이 있으면 그 절들, 없으면 첫 절 (절 번호 없이)
+//   (빈 줄)
+//   👉 링크
 function buildShareText() {
   const d = new Date(currentDate + 'T00:00:00Z');
   const days = ['일','월','화','수','목','금','토'];
   const label = currentVersion === 'soon' ? '매일성경 순' : '매일성경';
   const title = currentBookInfo?.title ? ` 「${currentBookInfo.title}」` : '';
   const url = `${location.origin}/?date=${currentDate}${currentVersion === 'soon' ? '&v=soon' : ''}`;
-  const verses = [...document.querySelectorAll('#bonmun-body .verse-line')]
-    .map(el => `${el.dataset.verseNum} ${el.querySelector('.verse-text').textContent.trim()}`);
+
+  const picked = [...selectedVerses].sort((a, b) => a.dataset.verseNum - b.dataset.verseNum);
+  const verseEls = picked.length ? picked : [document.querySelector('#bonmun-body .verse-line')].filter(Boolean);
+  const verses = verseEls.map(el => el.querySelector('.verse-text').textContent.trim());
 
   return [
     '📖 오늘 말씀, 같이 읽어요!',
-    '',
     `${d.getUTCMonth() + 1}/${d.getUTCDate()} (${days[d.getUTCDay()]}) ${label}${title}`,
     passageRef(),
     '',
     ...verses,
     '',
-    '하루 한 본문, 함께 읽고 묵상해요 🙏',
-    '해설과 나눔은 아래 링크에서 같이 볼 수 있어요.',
     `👉 ${url}`,
   ].join('\n');
 }
@@ -1165,6 +1175,83 @@ async function openGodpeople() {
 function isMobile() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+
+// ═══════════════════════════════════════════
+//  앱 설치 (PWA) — 안드로이드/PC 크롬·엣지는 설치 창을 바로 띄우고,
+//  그 밖(아이폰 Safari 등)은 설치 방법 안내를 보여줌
+// ═══════════════════════════════════════════
+let installPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();          // 브라우저 기본 안내 대신 우리 버튼으로
+  installPrompt = e;
+});
+
+window.addEventListener('appinstalled', () => {
+  installPrompt = null;
+  document.getElementById('install-banner').style.display = 'none';
+  document.getElementById('btn-install').style.display = 'none';
+  showToast('📲 설치됐어요! 홈 화면(앱 목록)에서 열 수 있어요', 'success', 4000);
+});
+
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+
+function detectOS() {
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) return 'android';
+  if (/iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'ios';
+  return 'desktop';
+}
+
+function initInstall() {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  if (isStandalone()) return;  // 이미 설치한 앱으로 열었으면 안내하지 않음
+  document.getElementById('btn-install').style.display = '';
+  let dismissed = false;
+  try { dismissed = localStorage.getItem('installBannerDismissed') === '1'; } catch {}
+  if (!dismissed) document.getElementById('install-banner').style.display = '';
+}
+
+function dismissInstallBanner() {
+  document.getElementById('install-banner').style.display = 'none';
+  try { localStorage.setItem('installBannerDismissed', '1'); } catch {}
+}
+
+async function installApp() {
+  if (installPrompt) {
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+    return;
+  }
+  openInstallGuide();
+}
+
+function openInstallGuide() {
+  // 지금 기기에 맞는 방법을 맨 위에, 강조해서
+  const os = detectOS();
+  const box = document.getElementById('install-steps');
+  const mine = box.querySelector(`.install-os[data-os="${os}"]`);
+  box.querySelectorAll('.install-os').forEach(el => el.classList.toggle('current', el === mine));
+  box.prepend(mine);
+
+  const modal = document.getElementById('install-modal');
+  const backdrop = document.getElementById('install-backdrop');
+  modal.style.display = 'flex';
+  backdrop.style.display = 'block';
+  setTimeout(() => { modal.classList.add('active'); backdrop.classList.add('active'); }, 10);
+}
+
+function closeInstallGuide() {
+  const modal = document.getElementById('install-modal');
+  const backdrop = document.getElementById('install-backdrop');
+  modal.classList.remove('active');
+  backdrop.classList.remove('active');
+  setTimeout(() => { modal.style.display = 'none'; backdrop.style.display = 'none'; }, 250);
 }
 
 
