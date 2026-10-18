@@ -1,0 +1,6 @@
+{
+  "name": "daily-bible",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" }
+}

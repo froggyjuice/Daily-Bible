@@ -1,6 +1,3 @@
-# GitHub Pages 임시 빌드
-_pages_build/
-
 # Python
 __pycache__/
 *.pyc
@@ -16,12 +13,16 @@ venv/
 .venv/
 env/
 
-# 스크랩 결과물 (로컬 전용)
+# 스크랩 결과물 — Supabase 로 이전됨, 저장소에 두지 않음 (저작권)
+data/
 output/
 
 # 환경설정
 .env
 .env.local
+.env*.local
+.vercel/
+node_modules/
 
 # IDE
 .vscode/

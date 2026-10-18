@@ -1,6 +1,6 @@
 /* ────────────────────────────────────────────
-   매일성경 — GitHub Pages 정적 버전
-   API 없이 /data/*.json 에서 직접 로드
+   매일성경 — Vercel + Supabase 버전
+   데이터는 /api/entries, /api/entry (암호 쿠키 필요) 에서 로드
    ──────────────────────────────────────────── */
 
 // ── 전역 상태 ────────────────────────────────
@@ -172,17 +172,11 @@ function switchView(view, save = true) {
 
 
 // ═══════════════════════════════════════════
-//  정적 데이터 로드
+//  데이터 로드
 // ═══════════════════════════════════════════
 async function loadEntries() {
   try {
-    let entries = [];
-    try {
-      entries = await staticFetch(`./data/${currentVersion}/entries.json`);
-    } catch (_) {
-      // 레거시 폴백
-      entries = await staticFetch('./data/entries.json');
-    }
+    const { dates: entries } = await apiFetch(`/api/entries?track=${currentVersion}`);
 
     entrySet.clear();
     entries.forEach(d => entrySet.add(d));
@@ -203,7 +197,8 @@ async function loadEntries() {
     }
 
   } catch (e) {
-    showToast('데이터 로드 실패. data/ 폴더를 확인하세요.', 'error');
+    if (e instanceof AuthRequired) return;
+    showToast('데이터 로드 실패: ' + e.message, 'error');
     console.error(e);
   }
 }
@@ -262,14 +257,10 @@ async function selectDate(dateStr) {
   if (currentView === 'calendar') renderCalendar(calYear, calMonth);
 
   try {
-    let data;
-    try {
-      data = await staticFetch(`./data/${currentVersion}/${dateStr}.json`);
-    } catch (_) {
-      data = await staticFetch(`./data/${dateStr}.json`);
-    }
+    const data = await apiFetch(`/api/entry?track=${currentVersion}&date=${dateStr}`);
     parseAndRender(data.content);
   } catch (e) {
+    if (e instanceof AuthRequired) return;
     showToast('콘텐츠 로드 실패: ' + e.message, 'error');
   }
 }
@@ -555,113 +546,30 @@ function goToToday() {
 }
 
 async function refreshData() {
-  const apiUrl = getApiUrl();
   const btn = document.getElementById('btn-refresh');
-
   if (btn.classList.contains('spinning')) return;
   btn.classList.add('spinning');
-  showRefreshStatus('');
+  showRefreshStatus('빠진 날짜 확인 및 스크랩 중...');
 
   try {
-    if (apiUrl) {
-      await apiRefresh(apiUrl);
+    const result = await apiFetch('/api/scrape', { method: 'POST' }, true);
+    if (!result.ok) {
+      showToast('❌ 스크랩 실패: ' + (result.error || ''), 'error', 6000);
+    } else if (result.scraped.length === 0) {
+      showToast('✅ 빠진 날짜 없음 — 최신 상태', 'success');
     } else {
-      showToast('⚙️ API 서버 미설정 — CDN 캐시만 갱신합니다', 'info', 4000);
+      const days = new Set(result.scraped.map(k => k.split(':')[0]));
+      showToast(`✅ ${days.size}일치 새로 스크랩됨`, 'success');
     }
-    await cdnRefresh();
+    const keep = currentDate;
+    currentDate = null;
+    await loadEntries();
+    if (keep && entrySet.has(keep)) await selectDate(keep);
+  } catch (e) {
+    if (!(e instanceof AuthRequired)) showToast('새로고침 실패: ' + e.message, 'error');
   } finally {
     btn.classList.remove('spinning');
     hideRefreshStatus();
-  }
-}
-
-// ── API 기반 새로고침 ──
-async function apiRefresh(apiUrl) {
-  let startRes;
-  try {
-    startRes = await fetch(`${apiUrl}/api/refresh`, { method: 'POST' });
-  } catch (e) {
-    showToast('API 서버에 연결할 수 없습니다', 'error');
-    return;
-  }
-
-  if (startRes.status === 409) {
-    showToast('이미 실행 중 — 진행 상태를 확인합니다...', 'info');
-  } else if (!startRes.ok) {
-    showToast('새로고침 시작 실패', 'error');
-    return;
-  } else {
-    showToast('🔄 스크랩 시작됨...', 'info');
-  }
-
-  let lastIdx = 0;
-  const maxWait = 600, interval = 2;
-
-  for (let elapsed = 0; elapsed < maxWait; elapsed += interval) {
-    await new Promise(r => setTimeout(r, interval * 1000));
-    let status;
-    try {
-      const res = await fetch(`${apiUrl}/api/status`);
-      status = await res.json();
-    } catch { continue; }
-
-    if (status.progress && status.progress.length > lastIdx) {
-      showRefreshStatus(status.progress[status.progress.length - 1]);
-      lastIdx = status.progress.length;
-    }
-
-    if (!status.running && status.result) {
-      if (status.result.success) {
-        if (status.result.pushed) {
-          showToast('✅ 스크랩 완료! GitHub Pages 갱신 대기...', 'success', 5000);
-          showRefreshStatus('GitHub Pages 빌드 대기 중...');
-          await new Promise(r => setTimeout(r, 15000));
-        } else {
-          showToast('✅ 누락 데이터 없음 — 최신 상태', 'success');
-        }
-      } else {
-        showToast('❌ 스크랩 실패: ' + (status.result.error || ''), 'error');
-      }
-      return;
-    }
-  }
-  showToast('⏰ 시간 초과 — 서버에서 계속 실행 중일 수 있습니다', 'info');
-}
-
-// ── CDN 캐시 우회 데이터 갱신 ──
-async function cdnRefresh() {
-  try {
-    let entries;
-    try {
-      entries = await staticFetch(`./data/${currentVersion}/entries.json`, true);
-    } catch (_) {
-      entries = await staticFetch('./data/entries.json', true);
-    }
-
-    entrySet.clear();
-    entries.forEach(d => entrySet.add(d));
-    renderSidebar(entries);
-
-    if (currentDate && entrySet.has(currentDate)) {
-      let data;
-      try {
-        data = await staticFetch(`./data/${currentVersion}/${currentDate}.json`, true);
-      } catch (_) {
-        data = await staticFetch(`./data/${currentDate}.json`, true);
-      }
-      parseAndRender(data.content);
-    } else if (!currentDate && entries.length > 0) {
-      await selectDate(entries[0]);
-    }
-
-    if (entries.length > 0) {
-      const nextEl = document.getElementById('next-run-label');
-      if (nextEl) nextEl.textContent = `최종 업데이트: ${entries[0]}`;
-    }
-
-    showToast('데이터 갱신 완료', 'success');
-  } catch (e) {
-    showToast('데이터 갱신 실패: ' + e.message, 'error');
   }
 }
 
@@ -676,51 +584,60 @@ function hideRefreshStatus() {
   if (el) { el.style.display = 'none'; el.textContent = ''; }
 }
 
-// ── API URL 관리 ──
-function getApiUrl() {
-  return localStorage.getItem('refreshApiUrl') || '';
-}
-function setApiUrl(url) {
-  localStorage.setItem('refreshApiUrl', url ? url.replace(/\/+$/, '') : '');
-}
 
-// ── 설정 모달 ──
-function openSettings() {
-  const modal = document.getElementById('settings-modal');
-  const backdrop = document.getElementById('settings-modal-backdrop');
-  document.getElementById('settings-api-url').value = getApiUrl();
-  document.getElementById('settings-test-result').textContent = '';
+// ═══════════════════════════════════════════
+//  암호 입력
+// ═══════════════════════════════════════════
+class AuthRequired extends Error {}
+
+function showLogin() {
+  const modal = document.getElementById('login-modal');
+  const backdrop = document.getElementById('login-modal-backdrop');
+  if (modal.style.display === 'flex') return;
   modal.style.display = 'flex';
   backdrop.style.display = 'block';
-  setTimeout(() => { modal.classList.add('active'); backdrop.classList.add('active'); }, 10);
+  setTimeout(() => {
+    modal.classList.add('active');
+    backdrop.classList.add('active');
+    document.getElementById('login-password').focus();
+  }, 10);
 }
 
-function closeSettings() {
-  const modal = document.getElementById('settings-modal');
-  const backdrop = document.getElementById('settings-modal-backdrop');
+function hideLogin() {
+  const modal = document.getElementById('login-modal');
+  const backdrop = document.getElementById('login-modal-backdrop');
   modal.classList.remove('active');
   backdrop.classList.remove('active');
   setTimeout(() => { modal.style.display = 'none'; backdrop.style.display = 'none'; }, 250);
 }
 
-function saveSettings() {
-  const url = document.getElementById('settings-api-url').value.trim();
-  setApiUrl(url);
-  showToast(url ? '✅ API 서버 URL 저장됨' : 'API 서버 URL 초기화됨', 'success');
-  closeSettings();
-}
-
-async function testApiConnection() {
-  const url = document.getElementById('settings-api-url').value.trim();
-  const el = document.getElementById('settings-test-result');
-  if (!url) { el.textContent = '❌ URL을 입력하세요'; el.className = 'settings-test-result error'; return; }
-  el.textContent = '🔄 연결 테스트 중...'; el.className = 'settings-test-result';
+async function submitLogin(event) {
+  event.preventDefault();
+  const input = document.getElementById('login-password');
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-submit');
+  btn.disabled = true;
+  errEl.textContent = '';
   try {
-    const res = await fetch(`${url.replace(/\/+$/, '')}/api/ping`, { signal: AbortSignal.timeout(5000) });
-    const data = await res.json();
-    if (data.ok) { el.textContent = `✅ 연결 성공! (서버: ${data.time})`; el.className = 'settings-test-result success'; }
-    else { el.textContent = '❌ 응답 오류'; el.className = 'settings-test-result error'; }
-  } catch (e) { el.textContent = `❌ 연결 실패: ${e.message}`; el.className = 'settings-test-result error'; }
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: input.value }),
+    });
+    if (!res.ok) {
+      errEl.textContent = res.status === 401 ? '암호가 올바르지 않습니다' : `오류 (${res.status})`;
+      input.select();
+      return;
+    }
+    input.value = '';
+    hideLogin();
+    currentDate = null;
+    await loadEntries();
+  } catch (e) {
+    errEl.textContent = '연결 실패: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function calPrev() {
@@ -739,11 +656,11 @@ function calNext() {
 // ═══════════════════════════════════════════
 //  유틸리티
 // ═══════════════════════════════════════════
-async function staticFetch(url, bustCache = false) {
-  // bustCache: 쿼리스트링으로 새 URL을 만들어 CDN 엣지 캐시(Cache-Control: max-age=600)까지 우회
-  const fetchUrl = bustCache ? `${url}?_=${Date.now()}` : url;
-  const res = await fetch(fetchUrl, bustCache ? { cache: 'no-store' } : undefined);
-  if (!res.ok) throw new Error(`${url} - ${res.status} ${res.statusText}`);
+// allowErrorBody: 실패 응답이어도 JSON 본문을 그대로 돌려줌 (/api/scrape 결과 표시용)
+async function apiFetch(url, options, allowErrorBody = false) {
+  const res = await fetch(url, { credentials: 'same-origin', ...options });
+  if (res.status === 401) { showLogin(); throw new AuthRequired(); }
+  if (!res.ok && !allowErrorBody) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
 }
 

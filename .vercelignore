@@ -1,0 +1,7 @@
+data/
+logs/
+scripts/
+supabase/
+*.ps1
+*.pdf
+.env*

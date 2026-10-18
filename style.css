@@ -695,8 +695,8 @@ html, body {
   flex-shrink: 0;
 }
 
-/* ── 설정 모달 ─────────────────────────────── */
-.settings-modal-backdrop {
+/* ── 암호 입력 모달 ─────────────────────────────── */
+.login-modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
@@ -705,9 +705,9 @@ html, body {
   opacity: 0;
   transition: opacity .25s ease;
 }
-.settings-modal-backdrop.active { opacity: 1; }
+.login-modal-backdrop.active { opacity: 1; }
 
-.settings-modal {
+.login-modal {
   position: fixed;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%) scale(.92);
@@ -722,41 +722,29 @@ html, body {
   transition: opacity .25s ease, transform .25s ease;
   flex-direction: column;
 }
-.settings-modal.active {
+.login-modal.active {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
 
-.settings-modal-header {
+.login-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px 12px;
   border-bottom: 1px solid var(--border);
 }
-.settings-modal-header h3 {
+.login-modal-header h3 {
   font-size: .92rem;
   font-weight: 600;
   color: var(--gold-light);
 }
 
-.settings-close-btn {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-2);
-  width: 28px; height: 28px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: .9rem;
-  display: flex; align-items: center; justify-content: center;
-  transition: color .15s, border-color .15s;
-}
-.settings-close-btn:hover { color: var(--red); border-color: var(--red); }
 
-.settings-modal-body {
+.login-modal-body {
   padding: 16px 20px 20px;
 }
-.settings-modal-body label {
+.login-modal-body label {
   display: block;
   font-size: .78rem;
   font-weight: 600;
@@ -764,7 +752,7 @@ html, body {
   margin-bottom: 6px;
 }
 
-.settings-input {
+.login-input {
   width: 100%;
   padding: 8px 12px;
   background: var(--bg);
@@ -776,29 +764,22 @@ html, body {
   outline: none;
   transition: border-color .2s;
 }
-.settings-input:focus { border-color: var(--gold); }
-.settings-input::placeholder { color: var(--text-3); }
+.login-input:focus { border-color: var(--gold); }
+.login-input::placeholder { color: var(--text-3); }
 
-.settings-help {
+.login-help {
   font-size: .72rem;
   color: var(--text-3);
   margin: 8px 0 16px;
   line-height: 1.6;
 }
-.settings-help code {
-  background: var(--surface-2);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: .72rem;
-  color: var(--gold);
-}
 
-.settings-actions {
+.login-actions {
   display: flex;
   gap: 8px;
 }
 
-.settings-btn {
+.login-btn {
   flex: 1;
   padding: 8px 12px;
   background: var(--surface-2);
@@ -810,23 +791,22 @@ html, body {
   cursor: pointer;
   transition: background .15s, border-color .15s;
 }
-.settings-btn:hover { background: var(--bg); border-color: var(--gold-dim); }
-.settings-btn.primary {
+.login-btn:hover { background: var(--bg); border-color: var(--gold-dim); }
+.login-btn.primary {
   background: var(--gold);
   color: #0a0d14;
   border-color: var(--gold);
   font-weight: 600;
 }
-.settings-btn.primary:hover { opacity: .9; }
+.login-btn.primary:hover { opacity: .9; }
 
-.settings-test-result {
+.login-test-result {
   margin-top: 12px;
   font-size: .76rem;
   color: var(--text-2);
   min-height: 1.2em;
 }
-.settings-test-result.success { color: var(--green); }
-.settings-test-result.error { color: var(--red); }
+.login-test-result.error { color: var(--red); }
 
 /* ── 절 복사 기능 ─────────────────────────── */
 .verse-group {
