@@ -1457,12 +1457,15 @@ html, body {
 }
 .site-footer a { color: inherit; text-decoration: underline dotted; }
 .site-footer p { margin: 0; }
+.site-footer .ft-short { display: none; }
 @media (max-width: 900px) {
   .site-footer {
     font-size: .58rem;
     padding: 2px 10px calc(4px + env(safe-area-inset-bottom));
     background: var(--surface);
   }
+  .site-footer .ft-long { display: none; }
+  .site-footer .ft-short { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* 도크가 아이폰 홈 표시줄 여백을 갖고 있었으므로, 이제 그 여백은 footer 가 가짐 */
   .dock { padding-bottom: 0; }
 }
