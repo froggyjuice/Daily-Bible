@@ -1052,15 +1052,7 @@ html, body {
   font-weight: 700;
 }
 
-/* ── 본문 바로가기 칩 ─────────────────────── */
-.passage-actions {
-  display: flex;
-  flex-wrap: wrap;   /* 좁은 화면에서 옆으로 잘리지 않고 다음 줄로 */
-  gap: 6px;
-  padding: 8px 24px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
+/* ── 칩 버튼 (설치 안내 등) ───────────────── */
 .chip {
   flex-shrink: 0;
   white-space: nowrap;
@@ -1075,6 +1067,44 @@ html, body {
   transition: color .15s, border-color .15s;
 }
 .chip:hover { color: var(--gold-light); border-color: var(--gold-dim); }
+
+/* ── ⋯ 더보기 메뉴 (본문 탭 옆) ───────────── */
+.more-wrap { position: relative; display: inline-block; }
+.more-btn.active { color: var(--gold-light); }
+.more-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 150;
+  min-width: 190px;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 28px rgba(0,0,0,.18);
+}
+.more-menu.open { display: flex; }
+.menu-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: .86rem;
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.menu-item:hover { background: var(--surface-2); }
+.menu-item small { font-size: .7rem; color: var(--text-3); }
+.menu-item.active { color: var(--gold-light); background: var(--gold-glow); }
 
 /* ── 나눔 탭: 메모 + 댓글 ──────────────────── */
 .nanum { max-width: 720px; display: flex; flex-direction: column; gap: 28px; }
@@ -1131,11 +1161,9 @@ html, body {
   .tab-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tabs { flex-shrink: 0; gap: 2px; }
   .tab-btn { padding: 8px 9px 10px; font-size: .78rem; }
-  .passage-actions { padding: 8px 12px; }
 }
 
 /* ── 공식 오디오 바 ───────────────────────── */
-.chip.active { color: var(--gold-light); border-color: var(--gold); background: var(--gold-glow); }
 .audio-bar {
   display: flex;
   flex-direction: column;

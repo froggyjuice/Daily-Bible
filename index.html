@@ -95,6 +95,18 @@
           <!-- 좁은 화면: 책을 넘기듯 본문 ↔ 해설 쪽 이동 -->
           <button class="tab-btn page-pill active" id="pill-haeseol" onclick="goPage('haeseol')">📝 해설</button>
           <button class="tab-btn page-pill"        id="pill-bonmun"  onclick="goPage('bonmun')">📖 본문</button>
+          <!-- 본문 바로가기 모음 (날짜 선택 시 표시) -->
+          <div class="more-wrap" id="more-wrap" style="display:none">
+            <button class="tab-btn more-btn" id="btn-more" onclick="toggleMore()" aria-haspopup="menu" aria-expanded="false">⋯ 더보기</button>
+            <div class="more-menu" id="more-menu" role="menu">
+              <button class="menu-item" id="btn-audio" onclick="toggleAudio(); closeMore()" role="menuitem" style="display:none">🎧 듣기 <small>공식 오디오</small></button>
+              <button class="menu-item" id="btn-hymn" onclick="playHymn(); closeMore()" role="menuitem" style="display:none">🎵 찬송</button>
+              <button class="menu-item" onclick="searchPassage('youtube'); closeMore()" role="menuitem">▶ 유튜브</button>
+              <button class="menu-item" onclick="searchPassage('web'); closeMore()" role="menuitem">🔍 검색</button>
+              <button class="menu-item" onclick="sharePassage(); closeMore()" role="menuitem">🤝 같이 읽어요</button>
+              <button class="menu-item" id="btn-godpeople" onclick="openGodpeople(); closeMore()" role="menuitem" style="display:none">📱 갓피플성경</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="refresh-status" id="refresh-status" style="display:none"></div>
@@ -104,16 +116,6 @@
         <span class="install-banner-text">📲 홈 화면에 설치하면 앱처럼 바로 열려요</span>
         <button class="chip" onclick="installApp()">설치하기</button>
         <button class="install-close" onclick="dismissInstallBanner()" aria-label="안내 닫기">✕</button>
-      </div>
-
-      <!-- 본문 바로가기 (날짜 선택 시 표시) -->
-      <div class="passage-actions" id="passage-actions" style="display:none">
-        <button class="chip" id="btn-audio" onclick="toggleAudio()" title="성서유니온 공식 오디오 (본문낭독 + 해설)" style="display:none">🎧 듣기</button>
-        <button class="chip" id="btn-hymn" onclick="playHymn()" title="오늘의 찬송 듣기 (유튜브)" style="display:none">🎵 찬송</button>
-        <button class="chip" onclick="searchPassage('youtube')" title="유튜브에서 본문 찾기">▶ 유튜브</button>
-        <button class="chip" onclick="searchPassage('web')" title="웹에서 본문 검색">🔍 검색</button>
-        <button class="chip" onclick="sharePassage()" title="이 본문 링크 공유">🤝 같이 읽어요</button>
-        <button class="chip" id="btn-godpeople" onclick="openGodpeople()" title="갓피플성경 앱에서 읽기" style="display:none">📱 갓피플성경</button>
       </div>
 
       <!-- 공식 오디오 (🎧 듣기로 열고 닫음) -->

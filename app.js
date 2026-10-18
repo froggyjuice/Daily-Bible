@@ -301,7 +301,7 @@ async function selectDate(dateStr) {
     const hymnBtn = document.getElementById('btn-hymn');
     hymnBtn.style.display = currentHymn ? '' : 'none';
     hymnBtn.textContent = currentHymn ? `🎵 찬송 ${currentHymn}장` : '🎵 찬송';
-    document.getElementById('passage-actions').style.display = currentBookInfo ? '' : 'none';
+    document.getElementById('more-wrap').style.display = currentBookInfo ? '' : 'none';
   } catch (e) {
     if (e instanceof AuthRequired) return;
     showToast('콘텐츠 로드 실패: ' + e.message, 'error');
@@ -522,7 +522,8 @@ async function writeClipboard(text) {
 }
 
 function clearPanels() {
-  document.getElementById('passage-actions').style.display = 'none';
+  document.getElementById('more-wrap').style.display = 'none';
+  closeMore();
   setAudio(null, null);
   ['bonmun','haeseol'].forEach(t => {
     document.getElementById(`empty-${t}`).style.display = 'flex';
@@ -1045,6 +1046,28 @@ async function removeComment(id) {
     if (!(e instanceof AuthRequired)) showToast('삭제 실패: ' + e.message, 'error');
   }
 }
+
+
+// ═══════════════════════════════════════════
+//  ⋯ 더보기 — 듣기 · 찬송 · 유튜브 · 검색 · 같이 읽어요 · 갓피플성경
+// ═══════════════════════════════════════════
+function toggleMore() {
+  const open = document.getElementById('more-menu').classList.toggle('open');
+  document.getElementById('btn-more').setAttribute('aria-expanded', open);
+  document.getElementById('btn-more').classList.toggle('active', open);
+}
+
+function closeMore() {
+  document.getElementById('more-menu').classList.remove('open');
+  document.getElementById('btn-more').setAttribute('aria-expanded', 'false');
+  document.getElementById('btn-more').classList.remove('active');
+}
+
+// 메뉴 바깥을 누르거나 Esc 를 누르면 닫힘
+document.addEventListener('click', e => {
+  if (!e.target.closest('#more-wrap')) closeMore();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMore(); });
 
 
 // ═══════════════════════════════════════════
