@@ -1,6 +1,6 @@
 import { requireAuth } from './_lib/auth.js';
 import { getEntry } from './_lib/db.js';
-import { TRACKS } from './_lib/scrape.js';
+import { TRACKS, todayKst } from './_lib/scrape.js';
 
 export default async function handler(req, res) {
   if (!requireAuth(req, res)) return;
@@ -9,6 +9,7 @@ export default async function handler(req, res) {
   if (!TRACKS[track] || !/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
     return res.status(400).json({ error: 'invalid params' });
   }
+  if (date > todayKst()) return res.status(404).json({ error: 'not yet published' });
 
   try {
     const row = await getEntry(date, track);

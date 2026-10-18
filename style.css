@@ -622,7 +622,7 @@ html, body {
 .sidebar-backdrop {
   display: none;
   position: absolute;
-  inset: 0;
+  inset: var(--header-h) 0 0 0;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
   z-index: 40;
@@ -640,10 +640,10 @@ html, body {
   .layout { position: relative; }
   
   /* 모바일 사이드바 오버레이 모드 */
+  /* .layout 의 padding-top(고정 헤더 높이) 아래에서 시작해야 사이드바 상단이 헤더에 가려지지 않음 */
   .sidebar {
     position: absolute;
-    top: 0; bottom: 0; left: 0;
-    height: 100%;
+    top: var(--header-h); bottom: 0; left: 0;
     z-index: 50;
     transform: translateX(0);
     box-shadow: 4px 0 20px rgba(0,0,0,0.3);
@@ -889,7 +889,8 @@ html, body {
 }
 
 /* ── 플로팅 복사 바 ──────────────────────── */
-#verse-copy-bar {
+#verse-copy-bar,
+#hl-bar {
   position: fixed;
   bottom: 24px;
   left: 50%;
@@ -908,7 +909,8 @@ html, body {
   transition: transform .3s cubic-bezier(.4,0,.2,1), opacity .3s ease;
   white-space: nowrap;
 }
-#verse-copy-bar.active {
+#verse-copy-bar.active,
+#hl-bar.active {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
 }
@@ -948,4 +950,112 @@ html, body {
 }
 .vcb-btn.vcb-cancel:hover { color: var(--red); border-color: var(--red); }
 
+/* ── 형광펜 (노란색) ───────────────────────── */
+:root { --hl: rgba(255, 221, 0, .55); }
+[data-theme="dark"] { --hl: rgba(255, 210, 0, .32); }
 
+.verse-line.verse-hl { background: var(--hl); }
+.verse-line.verse-hl:hover { background: var(--hl); filter: brightness(1.05); }
+mark.hl {
+  background: var(--hl);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+  cursor: pointer;
+}
+.vcb-btn.vcb-hl { background: #ffd400; color: #2a2200; }
+
+/* ── 탭 뱃지 (댓글 수) ─────────────────────── */
+.tab-badge:not(:empty) {
+  margin-left: 4px;
+  font-size: .66rem;
+  background: var(--gold);
+  color: #0a0d14;
+  border-radius: 8px;
+  padding: 0 5px;
+  font-weight: 700;
+}
+
+/* ── 본문 바로가기 칩 ─────────────────────── */
+.passage-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.passage-actions::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px 11px;
+  font-size: .76rem;
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.chip:hover { color: var(--gold-light); border-color: var(--gold-dim); }
+
+/* ── 나눔 탭: 메모 + 댓글 ──────────────────── */
+.nanum { max-width: 720px; display: flex; flex-direction: column; gap: 28px; }
+.nanum-title {
+  font-size: .92rem; font-weight: 600; color: var(--gold-light);
+  margin-bottom: 10px;
+}
+.nanum-title small { font-size: .72rem; font-weight: 400; color: var(--text-3); margin-left: 6px; }
+.nanum-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: .9rem;
+  line-height: 1.7;
+  font-family: 'Noto Sans KR', sans-serif;
+  outline: none;
+  resize: vertical;
+  transition: border-color .2s;
+}
+.nanum-input:focus { border-color: var(--gold); }
+.nanum-input::placeholder { color: var(--text-3); }
+.memo-input { font-family: 'Noto Serif KR', serif; min-height: 140px; }
+.nanum-hint { font-size: .72rem; color: var(--text-3); margin-top: 6px; min-height: 1em; }
+
+.comment-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.comment-empty { font-size: .84rem; color: var(--text-3); padding: 8px 0; }
+.comment-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.comment-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.comment-nick { font-size: .82rem; font-weight: 600; color: var(--gold-light); }
+.comment-time { font-size: .7rem; color: var(--text-3); }
+.comment-del {
+  margin-left: auto;
+  background: none; border: none;
+  font-size: .72rem; color: var(--text-3);
+  cursor: pointer;
+}
+.comment-del:hover { color: var(--red); }
+.comment-body { font-size: .88rem; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+.comment-form { display: flex; flex-direction: column; gap: 8px; }
+.comment-form .nanum-input:first-child { max-width: 200px; }
+.comment-form .login-btn { align-self: flex-end; flex: none; padding: 8px 22px; }
+
+/* ── 모바일: 탭 줄이 넘치지 않게 ───────────── */
+@media (max-width: 768px) {
+  .tab-header { padding: 10px 12px 0; gap: 8px; }
+  .tab-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabs { flex-shrink: 0; gap: 2px; }
+  .tab-btn { padding: 8px 9px 10px; font-size: .78rem; }
+  .passage-actions { padding: 8px 12px; }
+}

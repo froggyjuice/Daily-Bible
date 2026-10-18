@@ -27,9 +27,10 @@ async function rest(path, { method = 'GET', body, prefer } = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-// 날짜 목록 (트랙별, 내림차순)
-export async function listDates(track) {
-  const rows = await rest(`qt_entries?select=qt_date&track=eq.${encodeURIComponent(track)}&order=qt_date.desc&limit=5000`);
+// 날짜 목록 (트랙별, 내림차순, maxDate 이하만)
+export async function listDates(track, maxDate) {
+  const cap = maxDate ? `&qt_date=lte.${encodeURIComponent(maxDate)}` : '';
+  const rows = await rest(`qt_entries?select=qt_date&track=eq.${encodeURIComponent(track)}${cap}&order=qt_date.desc&limit=5000`);
   return rows.map(r => r.qt_date);
 }
 
@@ -68,4 +69,30 @@ export async function logRun(run) {
   } catch (e) {
     console.error('[scrape_runs 기록 실패]', e.message);
   }
+}
+
+// ── 댓글 ──
+export async function listComments(date) {
+  return rest(
+    `qt_comments?select=id,nickname,body,created_at,delete_hash&qt_date=eq.${encodeURIComponent(date)}` +
+    `&order=created_at.asc&limit=500`
+  );
+}
+
+export async function insertComment(row) {
+  const rows = await rest('qt_comments?select=id,nickname,body,created_at', {
+    method: 'POST',
+    body: row,
+    prefer: 'return=representation',
+  });
+  return rows[0];
+}
+
+// delete_hash 가 일치할 때만 삭제 → 삭제된 행 수
+export async function deleteComment(id, deleteHash) {
+  const rows = await rest(
+    `qt_comments?id=eq.${encodeURIComponent(id)}&delete_hash=eq.${encodeURIComponent(deleteHash)}`,
+    { method: 'DELETE', prefer: 'return=representation' }
+  );
+  return rows.length;
 }

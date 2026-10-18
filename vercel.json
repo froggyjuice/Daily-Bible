@@ -5,7 +5,7 @@
     "api/**/*.js": { "maxDuration": 60 }
   },
   "crons": [
-    { "path": "/api/cron/scrape", "schedule": "0 21 * * *" }
+    { "path": "/api/cron/scrape", "schedule": "5 15 * * *" }
   ],
   "headers": [
     {

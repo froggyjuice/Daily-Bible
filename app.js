@@ -40,11 +40,27 @@ async function switchVersion(ver) {
 // ═══════════════════════════════════════════
 //  초기화
 // ═══════════════════════════════════════════
+// 공유 링크(?date=YYYY-MM-DD&v=soon)로 들어오면 그 날짜를 먼저 연다
+let pendingDate = null;
+
 window.addEventListener('DOMContentLoaded', async () => {
   marked.setOptions({ gfm: true, breaks: true });
 
   initTheme();
   restoreUI();
+
+  const params = new URLSearchParams(location.search);
+  if (params.get('v') === 'soon') {
+    currentVersion = 'soon';
+    document.getElementById('version-btn-main')?.classList.remove('active');
+    document.getElementById('version-btn-soon')?.classList.add('active');
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(params.get('date') || '')) pendingDate = params.get('date');
+  if (params.has('date') || params.has('v')) history.replaceState(null, '', location.pathname);
+
+  if (isMobile()) document.getElementById('btn-godpeople').style.display = '';
+  document.addEventListener('selectionchange', onSelectionChange);
+
   await loadEntries();
 });
 
@@ -183,9 +199,11 @@ async function loadEntries() {
 
     renderSidebar(entries);
 
-    // 오늘 자동 선택 (Cron 이 이틀 뒤까지 미리 받아 두므로 entries[0] 은 미래일 수 있음)
+    // 공유 링크 날짜 → 없으면 최신(= 오늘, 서버가 오늘 이후는 내려주지 않음)
     if (entries.length > 0) {
-      await selectDate(entrySet.has(todayKST()) ? todayKST() : entries[0]);
+      const target = pendingDate && entrySet.has(pendingDate) ? pendingDate : entries[0];
+      pendingDate = null;
+      await selectDate(target);
     } else {
       clearPanels();
     }
@@ -222,7 +240,6 @@ function renderSidebar(entries) {
     let sub = formatDateKo(dateStr);
     if (dateStr === today)          sub = '오늘';
     else if (dateStr === yesterday) sub = '어제';
-    else if (dateStr === offsetDate(today, 1)) sub = '내일';
 
     return `
       <li class="date-item" id="item-${dateStr}" onclick="selectDate('${dateStr}')">
@@ -248,7 +265,10 @@ async function selectDate(dateStr) {
   currentDate = dateStr;
   clearPanels();
   clearVerseSelection();
+  hideHighlightBar();
   document.getElementById('content-meta').textContent = formatDateKo(dateStr);
+  loadMemo(dateStr);
+  loadComments(dateStr);
 
   // 모바일에서는 날짜 선택 시 가로 렌더링 최적화를 위해 사이드바 자동 닫기
   if (window.innerWidth <= 768 && !sidebarCollapsed) {
@@ -259,7 +279,10 @@ async function selectDate(dateStr) {
 
   try {
     const data = await apiFetch(`/api/entry?track=${currentVersion}&date=${dateStr}`);
+    if (currentDate !== dateStr) return;  // 그사이 다른 날짜를 눌렀으면 버림
     parseAndRender(data.content);
+    applyHighlights();
+    document.getElementById('passage-actions').style.display = currentBookInfo ? '' : 'none';
   } catch (e) {
     if (e instanceof AuthRequired) return;
     showToast('콘텐츠 로드 실패: ' + e.message, 'error');
@@ -372,6 +395,7 @@ function updateCopyBar() {
     bar.innerHTML = `
       <span class="vcb-info"></span>
       <div class="vcb-actions">
+        <button class="vcb-btn vcb-hl" onclick="highlightSelectedVerses()" title="형광펜">🖍</button>
         <button class="vcb-btn" onclick="copySelectedVerses()">📋 복사</button>
         <button class="vcb-btn vcb-cancel" onclick="clearVerseSelection()">✕</button>
       </div>`;
@@ -477,6 +501,7 @@ async function writeClipboard(text) {
 }
 
 function clearPanels() {
+  document.getElementById('passage-actions').style.display = 'none';
   ['bonmun','haeseol'].forEach(t => {
     document.getElementById(`empty-${t}`).style.display = 'flex';
     document.getElementById(`${t}-body`).innerHTML = '';
@@ -489,6 +514,8 @@ function clearPanels() {
 // ═══════════════════════════════════════════
 function switchTab(tab) {
   currentTab = tab;
+  if (tab !== 'haeseol') hideHighlightBar();
+  if (tab !== 'bonmun') clearVerseSelection();
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById(`tab-${tab}`).classList.add('active');
@@ -651,6 +678,364 @@ function calNext() {
   calMonth++;
   if (calMonth > 11) { calMonth = 0; calYear++; }
   renderCalendar(calYear, calMonth);
+}
+
+
+// ═══════════════════════════════════════════
+//  형광펜 (노란색) — 이 브라우저에만 저장
+//  본문: 절을 탭해 선택 → 하단 바 🖍 / 해설: 글자를 드래그 → 하단 바 🖍
+// ═══════════════════════════════════════════
+const hlKey = () => `hl:${currentVersion}:${currentDate}`;
+
+function loadHl() {
+  try { return JSON.parse(localStorage.getItem(hlKey())) || { v: [], r: [] }; }
+  catch { return { v: [], r: [] }; }
+}
+
+function saveHl(hl) {
+  try {
+    if (!hl.v.length && !hl.r.length) localStorage.removeItem(hlKey());
+    else localStorage.setItem(hlKey(), JSON.stringify(hl));
+  } catch { showToast('브라우저 저장소를 쓸 수 없습니다', 'error'); }
+}
+
+function applyHighlights() {
+  const hl = loadHl();
+  document.querySelectorAll('#bonmun-body .verse-line').forEach(el =>
+    el.classList.toggle('verse-hl', hl.v.includes(Number(el.dataset.verseNum)))
+  );
+  const body = document.getElementById('haeseol-body');
+  body.querySelectorAll('mark.hl').forEach(m => m.replaceWith(...m.childNodes));
+  body.normalize();
+  hl.r.forEach((range, idx) => wrapRange(body, range, idx));
+}
+
+function textNodes(container) {
+  const nodes = [];
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  for (let pos = 0, n; (n = walker.nextNode()); pos += n.data.length) nodes.push({ n, start: pos });
+  return nodes;
+}
+
+// 컨테이너 textContent 기준 [시작, 끝) 범위를 <mark class="hl"> 로 감싼다
+function wrapRange(container, [rs, re], idx) {
+  for (const { n, start } of textNodes(container)) {
+    const a = Math.max(rs, start) - start;
+    const b = Math.min(re, start + n.data.length) - start;
+    if (a >= b) continue;
+    let target = n;
+    if (b < target.data.length) target.splitText(b);
+    if (a > 0) target = target.splitText(a);
+    const mark = document.createElement('mark');
+    mark.className = 'hl';
+    mark.dataset.r = idx;
+    target.replaceWith(mark);
+    mark.appendChild(target);
+  }
+}
+
+function textOffset(container, node, offset) {
+  const r = document.createRange();
+  r.selectNodeContents(container);
+  r.setEnd(node, offset);
+  return r.toString().length;
+}
+
+function mergeRanges(ranges) {
+  const sorted = ranges.slice().sort((x, y) => x[0] - y[0]);
+  const out = [];
+  for (const [s, e] of sorted) {
+    if (out.length && s <= out[out.length - 1][1]) out[out.length - 1][1] = Math.max(out[out.length - 1][1], e);
+    else out.push([s, e]);
+  }
+  return out;
+}
+
+// ── 본문: 선택한 절 칠하기 / 이미 다 칠해져 있으면 지우기 ──
+function highlightSelectedVerses() {
+  const nums = [...selectedVerses].map(el => Number(el.dataset.verseNum));
+  const hl = loadHl();
+  const allOn = nums.every(n => hl.v.includes(n));
+  hl.v = allOn ? hl.v.filter(n => !nums.includes(n)) : [...new Set([...hl.v, ...nums])].sort((a, b) => a - b);
+  saveHl(hl);
+  clearVerseSelection();
+  applyHighlights();
+  showToast(allOn ? '🖍 형광펜 지움' : '🖍 형광펜 칠함', 'success', 1800);
+}
+
+// ── 해설: 글자 선택 → 하단 바 ──
+let hlPending = null;   // { add: [s, e] } | { remove: idx }
+let hlHideTimer = null;
+
+function onSelectionChange() {
+  const sel = window.getSelection();
+  const body = document.getElementById('haeseol-body');
+  if (sel.rangeCount && !sel.isCollapsed && currentTab === 'haeseol') {
+    const r = sel.getRangeAt(0);
+    if (body.contains(r.commonAncestorContainer)) {
+      const s = textOffset(body, r.startContainer, r.startOffset);
+      const e = textOffset(body, r.endContainer, r.endOffset);
+      if (e > s) {
+        clearTimeout(hlHideTimer);
+        hlPending = { add: [s, e] };
+        showHighlightBar('형광펜 칠하기');
+        return;
+      }
+    }
+  }
+  // 모바일은 버튼을 누르는 순간 선택이 풀릴 수 있어서 잠깐 기다렸다가 숨김
+  if (hlPending?.add) hlHideTimer = setTimeout(hideHighlightBar, 400);
+}
+
+document.addEventListener('click', e => {
+  const mark = e.target.closest?.('#haeseol-body mark.hl');
+  if (mark && window.getSelection().isCollapsed) {
+    hlPending = { remove: Number(mark.dataset.r) };
+    showHighlightBar('이 형광펜 지우기');
+  } else if (hlPending && hlPending.remove !== undefined && !e.target.closest('#hl-bar')) {
+    hideHighlightBar();
+  }
+});
+
+function showHighlightBar(label) {
+  let bar = document.getElementById('hl-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'hl-bar';
+    bar.innerHTML = `
+      <span class="vcb-info"></span>
+      <div class="vcb-actions">
+        <button class="vcb-btn vcb-hl" onclick="applyPendingHighlight()">🖍</button>
+        <button class="vcb-btn vcb-cancel" onclick="hideHighlightBar()">✕</button>
+      </div>`;
+    // 버튼을 눌러도 텍스트 선택이 풀리지 않게
+    bar.addEventListener('pointerdown', e => e.preventDefault());
+    document.body.appendChild(bar);
+  }
+  bar.querySelector('.vcb-info').textContent = label;
+  bar.classList.add('active');
+}
+
+function hideHighlightBar() {
+  clearTimeout(hlHideTimer);
+  hlPending = null;
+  document.getElementById('hl-bar')?.classList.remove('active');
+}
+
+function applyPendingHighlight() {
+  if (!hlPending || !currentDate) return;
+  const hl = loadHl();
+  if (hlPending.add) hl.r = mergeRanges([...hl.r, hlPending.add]);
+  else hl.r.splice(hlPending.remove, 1);
+  saveHl(hl);
+  window.getSelection().removeAllRanges();
+  hideHighlightBar();
+  applyHighlights();
+}
+
+
+// ═══════════════════════════════════════════
+//  메모 — 날짜별, 이 브라우저에만 저장 (매일성경/순은 같은 성경 본문이라 공통)
+// ═══════════════════════════════════════════
+let memoTimer = null;
+
+function loadMemo(dateStr) {
+  const input = document.getElementById('memo-input');
+  let saved = '';
+  try { saved = localStorage.getItem(`memo:${dateStr}`) || ''; } catch {}
+  input.value = saved;
+  input.disabled = false;
+  document.getElementById('memo-status').textContent = saved ? '저장된 메모' : '';
+}
+
+function onMemoInput() {
+  const dateStr = currentDate;
+  const value = document.getElementById('memo-input').value;
+  document.getElementById('memo-status').textContent = '입력 중…';
+  clearTimeout(memoTimer);
+  memoTimer = setTimeout(() => {
+    try {
+      if (value.trim()) localStorage.setItem(`memo:${dateStr}`, value);
+      else localStorage.removeItem(`memo:${dateStr}`);
+      const t = new Date().toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
+      document.getElementById('memo-status').textContent = `저장됨 · ${t}`;
+    } catch {
+      document.getElementById('memo-status').textContent = '⚠ 저장 실패 (브라우저 저장소를 쓸 수 없음)';
+    }
+  }, 400);
+}
+
+
+// ═══════════════════════════════════════════
+//  댓글 — 날짜별, 닉네임만으로 작성, 이 브라우저에서 쓴 댓글만 삭제 가능
+// ═══════════════════════════════════════════
+function commentToken() {
+  try {
+    let t = localStorage.getItem('commentToken');
+    if (!t) {
+      const bytes = crypto.getRandomValues(new Uint8Array(24));
+      t = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      localStorage.setItem('commentToken', t);
+    }
+    return t;
+  } catch { return ''; }
+}
+
+async function loadComments(dateStr) {
+  const list = document.getElementById('comment-list');
+  list.innerHTML = '<li class="comment-empty">불러오는 중…</li>';
+  try { document.getElementById('comment-nick').value = localStorage.getItem('commentNick') || ''; } catch {}
+  try {
+    const { comments } = await apiFetch(`/api/comments?date=${dateStr}`, { headers: { 'X-Comment-Token': commentToken() } });
+    if (currentDate !== dateStr) return;
+    renderComments(comments);
+  } catch (e) {
+    if (e instanceof AuthRequired) return;
+    list.innerHTML = '<li class="comment-empty">댓글을 불러오지 못했습니다</li>';
+    setCommentCount(0);
+  }
+}
+
+function setCommentCount(n) {
+  document.getElementById('comment-count').textContent = n ? `${n}개` : '';
+  document.getElementById('comment-badge').textContent = n ? n : '';
+}
+
+function renderComments(comments) {
+  const list = document.getElementById('comment-list');
+  setCommentCount(comments.length);
+  list.innerHTML = '';
+  if (!comments.length) {
+    list.innerHTML = '<li class="comment-empty">첫 나눔을 남겨주세요 🙂</li>';
+    return;
+  }
+  for (const c of comments) list.appendChild(commentItem(c));
+}
+
+function commentItem(c) {
+  const li = document.createElement('li');
+  li.className = 'comment-item';
+  const head = document.createElement('div');
+  head.className = 'comment-head';
+  const nick = document.createElement('span');
+  nick.className = 'comment-nick';
+  nick.textContent = c.nickname;
+  const time = document.createElement('span');
+  time.className = 'comment-time';
+  time.textContent = new Date(c.created_at).toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+  head.append(nick, time);
+  if (c.mine) {
+    const del = document.createElement('button');
+    del.className = 'comment-del';
+    del.textContent = '삭제';
+    del.onclick = () => removeComment(c.id);
+    head.appendChild(del);
+  }
+  const body = document.createElement('p');
+  body.className = 'comment-body';
+  body.textContent = c.body;
+  li.append(head, body);
+  return li;
+}
+
+async function submitComment(event) {
+  event.preventDefault();
+  if (!currentDate) return;
+  const nickEl = document.getElementById('comment-nick');
+  const bodyEl = document.getElementById('comment-body');
+  const btn = document.getElementById('comment-submit');
+  btn.disabled = true;
+  try {
+    const res = await apiFetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: currentDate, nickname: nickEl.value, body: bodyEl.value, token: commentToken() }),
+    }, true);
+    if (!res.comment) { showToast(res.error || '등록 실패', 'error'); return; }
+    try { localStorage.setItem('commentNick', nickEl.value.trim()); } catch {}
+    bodyEl.value = '';
+    await loadComments(currentDate);
+    showToast('💬 등록했어요', 'success', 1800);
+  } catch (e) {
+    if (!(e instanceof AuthRequired)) showToast('등록 실패: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function removeComment(id) {
+  if (!confirm('이 댓글을 삭제할까요?')) return;
+  try {
+    const res = await apiFetch(`/api/comments?id=${id}&token=${encodeURIComponent(commentToken())}`, { method: 'DELETE' }, true);
+    if (!res.ok) { showToast(res.error || '삭제 실패', 'error'); return; }
+    await loadComments(currentDate);
+  } catch (e) {
+    if (!(e instanceof AuthRequired)) showToast('삭제 실패: ' + e.message, 'error');
+  }
+}
+
+
+// ═══════════════════════════════════════════
+//  본문 바로가기: 유튜브/웹 검색 · 같이 읽어요(공유) · 갓피플성경
+// ═══════════════════════════════════════════
+function passageRef() {
+  const b = currentBookInfo;
+  if (!b) return '';
+  return b.verseStart === b.verseEnd ? `${b.book} ${b.chapter}:${b.verseStart}` : `${b.book} ${b.chapter}:${b.verseStart}-${b.verseEnd}`;
+}
+
+function searchPassage(kind) {
+  const b = currentBookInfo;
+  if (!b) return;
+  const verses = `${b.chapter}장 ${b.verseStart}-${b.verseEnd}절`;
+  const url = kind === 'youtube'
+    ? `https://www.youtube.com/results?search_query=${encodeURIComponent(`매일성경 ${b.book} ${verses}`)}`
+    : `https://www.google.com/search?q=${encodeURIComponent(`${b.book} ${verses} 묵상`)}`;
+  window.open(url, '_blank', 'noopener');
+}
+
+async function sharePassage() {
+  if (!currentDate) return;
+  const d = new Date(currentDate + 'T00:00:00Z');
+  const days = ['일','월','화','수','목','금','토'];
+  const label = currentVersion === 'soon' ? '매일성경 순' : '매일성경';
+  const title = currentBookInfo?.title ? ` "${currentBookInfo.title}"` : '';
+  const text = `같이 읽어요 📖\n${d.getUTCMonth() + 1}/${d.getUTCDate()} (${days[d.getUTCDay()]}) ${label}${title}\n${passageRef()}`;
+  const url = `${location.origin}/?date=${currentDate}${currentVersion === 'soon' ? '&v=soon' : ''}`;
+
+  if (navigator.share) {
+    try { await navigator.share({ title: '매일성경', text, url }); }
+    catch (e) { if (e.name !== 'AbortError') showToast('공유 실패: ' + e.message, 'error'); }
+    return;
+  }
+  await writeClipboard(`${text}\n${url}`);
+  showToast('🔗 공유 문구와 링크를 복사했어요', 'success');
+}
+
+// 갓피플성경은 특정 본문으로 바로 가는 공개 링크가 없어서, 본문 위치를 복사한 뒤 앱을 연다
+async function openGodpeople() {
+  const ref = passageRef();
+  if (ref) {
+    await writeClipboard(ref);
+    showToast(`📋 "${ref}" 복사됨 — 앱에서 찾아보세요`, 'info', 3000);
+  }
+  const ua = navigator.userAgent;
+  setTimeout(() => {
+    if (/Android/i.test(ua)) {
+      const store = 'https://play.google.com/store/apps/details?id=com.godpeople.GPBIBLE';
+      location.href = 'intent://#Intent;package=com.godpeople.GPBIBLE;action=android.intent.action.MAIN;' +
+        `category=android.intent.category.LAUNCHER;S.browser_fallback_url=${encodeURIComponent(store)};end`;
+    } else {
+      location.href = 'https://apps.apple.com/kr/app/id511852665';
+    }
+  }, 600);
+}
+
+function isMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
 

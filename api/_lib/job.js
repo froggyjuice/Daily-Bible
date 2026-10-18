@@ -1,6 +1,7 @@
 /* ────────────────────────────────────────────
    스크랩 작업: 빠진 (날짜, 트랙)을 찾아 스크랩 → Supabase upsert
-   Vercel Cron / 수동 새로고침 / 로컬 스크립트가 공통으로 사용
+   Vercel Cron / 수동 새로고침 / 첫 방문 시 오늘자 채우기 / 로컬 스크립트가 공통으로 사용
+   - 공개 정책: KST 기준 오늘 본문까지만 저장한다 (내일 것은 자정이 지나야 저장·공개)
    ──────────────────────────────────────────── */
 
 import { openSession, fetchQt, toMarkdown, TRACKS, todayKst, addDays } from './scrape.js';
@@ -11,20 +12,22 @@ import { existingKeys, oldestDate, upsertEntries, logRun } from './db.js';
  * @param {string} opts.source      scrape_runs.source / qt_entries.scraped_by 값
  * @param {string[]} [opts.dates]   지정 시 이 날짜들만 (force 와 함께 쓰면 기존 것도 덮어씀)
  * @param {number} [opts.lookback]  오늘 기준 며칠 전까지 빠진 날짜를 채울지 (기본 30, 'all' 이면 DB의 가장 오래된 날짜부터)
- * @param {number} [opts.ahead]     오늘 이후 며칠까지 미리 받을지 (사이트 공개 범위 밖은 자동으로 건너뜀)
  * @param {boolean} [opts.force]
  * @param {(msg: string) => void} [opts.log]
  */
-export async function runScrape({ source, dates, lookback = 30, ahead = 2, force = false, log = console.log } = {}) {
+export async function runScrape({ source, dates, lookback = 30, force = false, log = console.log } = {}) {
   const today = todayKst();
   let targets = dates;
   if (!targets) {
     let from = addDays(today, -lookback);
     if (lookback === 'all') from = (await oldestDate()) || today;
     targets = [];
-    for (let d = from; d <= addDays(today, ahead); d = addDays(d, 1)) targets.push(d);
+    for (let d = from; d <= today; d = addDays(d, 1)) targets.push(d);
   }
-  targets = [...new Set(targets)].sort();
+  targets = [...new Set(targets)].filter(d => d <= today).sort();
+
+  const result = { ok: true, scraped: [], unavailable: [], error: null };
+  if (targets.length === 0) return result;
 
   const have = force ? new Set() : await existingKeys(targets[0], targets[targets.length - 1]);
   const todo = [];
@@ -32,7 +35,6 @@ export async function runScrape({ source, dates, lookback = 30, ahead = 2, force
     if (!have.has(`${date}:${track}`)) todo.push({ date, track });
   }
 
-  const result = { ok: true, scraped: [], unavailable: [], error: null };
   if (todo.length === 0) {
     log('[완료] 빠진 날짜 없음');
     return result;
