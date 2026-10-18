@@ -282,6 +282,7 @@ async function selectDate(dateStr) {
     if (currentDate !== dateStr) return;  // 그사이 다른 날짜를 눌렀으면 버림
     parseAndRender(data.content);
     applyHighlights();
+    setAudio(data.mediaUrl, data.speaker);
     document.getElementById('passage-actions').style.display = currentBookInfo ? '' : 'none';
   } catch (e) {
     if (e instanceof AuthRequired) return;
@@ -502,6 +503,7 @@ async function writeClipboard(text) {
 
 function clearPanels() {
   document.getElementById('passage-actions').style.display = 'none';
+  setAudio(null, null);
   ['bonmun','haeseol'].forEach(t => {
     document.getElementById(`empty-${t}`).style.display = 'flex';
     document.getElementById(`${t}-body`).innerHTML = '';
@@ -974,6 +976,124 @@ async function removeComment(id) {
   } catch (e) {
     if (!(e instanceof AuthRequired)) showToast('삭제 실패: ' + e.message, 'error');
   }
+}
+
+
+// ═══════════════════════════════════════════
+//  공식 오디오 (성서유니온 mp3 — 본문낭독 + 오디오해설, 매일성경/순 공통)
+// ═══════════════════════════════════════════
+let audioOpen = false;
+let currentMedia = { url: null, speaker: null };
+
+function setAudio(url, speaker) {
+  const audio = document.getElementById('qt-audio');
+  if (currentMedia.url !== url) {
+    audio.pause();
+    if (url) audio.src = url; else audio.removeAttribute('src');
+  }
+  currentMedia = { url, speaker };
+  document.getElementById('audio-speaker').textContent = (speaker || '')
+    .split('|').map(p => p.replace(':', ' ')).filter(Boolean).join(' · ');
+  renderAudio();
+}
+
+function renderAudio() {
+  const has = !!currentMedia.url;
+  const btn = document.getElementById('btn-audio');
+  btn.style.display = has ? '' : 'none';
+  btn.classList.toggle('active', has && audioOpen);
+  document.getElementById('audio-bar').style.display = has && audioOpen ? '' : 'none';
+}
+
+function toggleAudio() {
+  const audio = document.getElementById('qt-audio');
+  audioOpen = !audioOpen;
+  renderAudio();
+  if (audioOpen) audio.play().catch(() => {});
+  else audio.pause();
+}
+
+
+// ═══════════════════════════════════════════
+//  유튜브 영상 — 화면 안에서 재생 (/api/videos 가 검색·캐시)
+// ═══════════════════════════════════════════
+async function openVideos() {
+  if (!currentDate) return;
+  const dateStr = currentDate;
+  let data;
+  try {
+    data = await apiFetch(`/api/videos?date=${dateStr}`, undefined, true);
+  } catch (e) {
+    if (e instanceof AuthRequired) return;
+    data = { error: e.message };
+  }
+  if (currentDate !== dateStr) return;
+  if (!data.items) {
+    // API 키 없음/할당량 초과 → 예전처럼 유튜브 검색을 새 창으로
+    searchPassage('youtube');
+    return;
+  }
+  if (!data.items.length) {
+    showToast('관련 영상을 찾지 못했어요 — 유튜브에서 직접 찾아볼게요', 'info');
+    searchPassage('youtube');
+    return;
+  }
+
+  document.getElementById('qt-audio').pause();
+  document.getElementById('video-query').textContent = `🔎 ${data.query}`;
+  document.getElementById('video-more').href =
+    `https://www.youtube.com/results?search_query=${encodeURIComponent(data.query)}`;
+
+  const list = document.getElementById('video-list');
+  list.innerHTML = '';
+  data.items.forEach((v, i) => {
+    const li = document.createElement('li');
+    li.className = 'video-item';
+    li.onclick = () => playVideo(v.id, li);
+    const img = document.createElement('img');
+    img.src = v.thumb; img.alt = ''; img.loading = 'lazy';
+    const meta = document.createElement('div');
+    meta.className = 'video-meta';
+    const title = document.createElement('div');
+    title.className = 'video-title';
+    title.textContent = decodeEntities(v.title);
+    const ch = document.createElement('div');
+    ch.className = 'video-channel';
+    ch.textContent = `${decodeEntities(v.channel)} · ${new Date(v.published).toLocaleDateString('ko-KR')}`;
+    meta.append(title, ch);
+    li.append(img, meta);
+    list.appendChild(li);
+    if (i === 0) playVideo(v.id, li);
+  });
+
+  const sheet = document.getElementById('video-sheet');
+  const backdrop = document.getElementById('video-backdrop');
+  sheet.style.display = 'flex';
+  backdrop.style.display = 'block';
+  setTimeout(() => { sheet.classList.add('active'); backdrop.classList.add('active'); }, 10);
+}
+
+function playVideo(id, li) {
+  document.getElementById('video-iframe').src =
+    `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&playsinline=1`;
+  document.querySelectorAll('.video-item.active').forEach(el => el.classList.remove('active'));
+  li?.classList.add('active');
+}
+
+function closeVideos() {
+  const sheet = document.getElementById('video-sheet');
+  const backdrop = document.getElementById('video-backdrop');
+  document.getElementById('video-iframe').src = 'about:blank';  // 재생 중지
+  sheet.classList.remove('active');
+  backdrop.classList.remove('active');
+  setTimeout(() => { sheet.style.display = 'none'; backdrop.style.display = 'none'; }, 250);
+}
+
+// YouTube API 제목에는 &quot; &#39; 같은 엔티티가 섞여 옴
+function decodeEntities(s) {
+  const t = document.createElement('textarea');
+  t.innerHTML = s || '';
+  return t.value;
 }
 
 

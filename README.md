@@ -19,7 +19,8 @@ Vercel Cron (하루 1회, icn1) ─┐
 - **공개 범위**: KST 기준 오늘 본문까지만 저장·공개합니다. Cron 은 자정 직후(00:05 KST, Hobby 플랜이라 최대 59분 지연)에 돌고, 그 전에 누가 먼저 접속하면 `/api/entries` 가 오늘자를 즉석에서 받아옵니다.
 - **나눔 탭**: 날짜별 메모(이 브라우저 localStorage)와 댓글(Supabase `qt_comments`, 닉네임만, 브라우저 토큰으로 본인 댓글만 삭제). 매일성경/순은 같은 성경 본문이라 메모·댓글은 날짜 단위로 공유됩니다.
 - **형광펜**: 본문은 절을 탭해 선택 → 하단 바 🖍, 해설은 글자를 드래그 → 🖍. localStorage 에 트랙·날짜별로 저장.
-- **바로가기**: ▶ 유튜브 / 🔍 웹 검색 / 🤝 같이 읽어요(공유 링크 `?date=YYYY-MM-DD&v=soon`) / 📱 갓피플성경(모바일 전용 — 본문 위치를 복사한 뒤 앱 실행. 특정 본문으로 바로 가는 공개 링크가 없음).
+- **공식 오디오**: 🎧 듣기 — 성서유니온 mp3(본문낭독 + 오디오해설)를 화면 안에서 재생. 주소와 낭독자는 스크랩 때 `BodyMatterDetail` 에서 함께 저장.
+- **바로가기**: ▶ 유튜브(키가 있으면 `/api/videos` 가 날짜별로 검색·캐시해 화면 안에서 재생) / 🔍 웹 검색 / 🤝 같이 읽어요(공유 링크 `?date=YYYY-MM-DD&v=soon`) / 📱 갓피플성경(모바일 전용 — 본문 위치를 복사한 뒤 앱 실행. 특정 본문으로 바로 가는 공개 링크가 없음).
 - **암호**: `SITE_PASSWORD`로 한 번 로그인하면 1년짜리 HttpOnly 쿠키가 발급되어, 같은 브라우저에서는 다시 묻지 않습니다. 암호를 바꾸면 기존 쿠키는 모두 무효가 됩니다.
 - **IP 차단**: `sum.su.or.kr`는 일부 해외/클라우드 IP를 막습니다(GitHub Actions 미국 러너에서 `ERR_CONNECTION_TIMED_OUT`). Vercel 함수는 서울(icn1)에서 돌며, 2026-10-18 테스트에서 5회 모두 정상 접속됐습니다. 그래도 막히는 날을 대비해 로컬 PC 자동화를 대체 경로로 둡니다(`scrape_runs` 테이블에서 실패 여부 확인).
 
@@ -34,6 +35,7 @@ Vercel Cron (하루 1회, icn1) ─┐
 | `SITE_PASSWORD` | 사이트 공유 암호 |
 | `AUTH_SECRET` | 쿠키 서명용 무작위 문자열 |
 | `CRON_SECRET` | Vercel Cron 호출 인증 |
+| `YOUTUBE_API_KEY` | (선택) YouTube Data API v3 키 — ▶ 유튜브 영상을 화면 안에서 재생. 없으면 새 창 검색 |
 
 ## 처음 설정
 
@@ -72,6 +74,7 @@ bible_scraper/
 │   ├── entries.js        # GET 날짜 목록
 │   ├── entry.js          # GET 날짜별 본문/해설 마크다운
 │   ├── comments.js       # GET/POST/DELETE 날짜별 댓글
+│   ├── videos.js         # GET 날짜별 유튜브 영상 (YouTube Data API + qt_videos 캐시)
 │   ├── scrape.js         # POST 🔄 버튼: 최근 7일 ~ 오늘 빠진 날짜 스크랩
 │   └── cron/scrape.js    # Vercel Cron: 최근 30일 ~ 오늘 빠진 날짜 스크랩
 ├── api/_lib/            # 라우트가 아닌 서버 전용 모듈 (정적 공개 안 됨)

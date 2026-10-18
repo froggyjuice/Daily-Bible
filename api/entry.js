@@ -15,7 +15,13 @@ export default async function handler(req, res) {
     const row = await getEntry(date, track);
     if (!row) return res.status(404).json({ error: 'not found' });
     res.setHeader('Cache-Control', 'private, max-age=300');
-    res.status(200).json({ date: row.qt_date, type: row.track, content: row.content_md });
+    res.status(200).json({
+      date: row.qt_date,
+      type: row.track,
+      content: row.content_md,
+      mediaUrl: row.media_url,
+      speaker: row.speaker,
+    });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'db error' });

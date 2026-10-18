@@ -62,9 +62,10 @@ export async function fetchQt(session, date, track) {
   const qt_ty = TRACKS[track];
   if (!qt_ty) throw new Error(`알 수 없는 트랙: ${track}`);
 
-  const [cont, verses] = await Promise.all([
+  const [cont, verses, detail] = await Promise.all([
     post(session, 'BodyBibleCont', { qt_ty, Base_de: date, Bibletype: '1' }),
     post(session, 'BodyBible', { qt_ty, Base_de: date }),
+    fetchMedia(session, date, track),
   ]);
 
   // 사이트가 해당 날짜를 아직 공개하지 않았거나 범위 밖이면 빈 응답
@@ -96,6 +97,17 @@ export async function fetchQt(session, date, track) {
     ref,
     verses: verses.map(v => ({ num: v.Verse, text: htmlToText(v.Bible_Cn) })),
     blocks: blocks.map(b => ({ kind: b.kind, text: htmlToText(b.text) })),
+    mediaUrl: detail.mediaUrl,
+    speaker: detail.speaker,
+  };
+}
+
+// 공식 오디오 mp3 주소 + 낭독/해설자 (BodyMatterDetail 에만 있음, 매일성경/순 공통)
+export async function fetchMedia(session, date, track) {
+  const d = await post(session, 'BodyMatterDetail', { qt_ty: TRACKS[track], Base_de: date });
+  return {
+    mediaUrl: /^https:\/\/[\w.-]+\/.+\.mp3$/i.test(d?.MediaFileUrl || '') ? d.MediaFileUrl : null,
+    speaker: d?.Speaker || null,
   };
 }
 

@@ -36,7 +36,7 @@ export async function listDates(track, maxDate) {
 
 export async function getEntry(date, track) {
   const rows = await rest(
-    `qt_entries?select=qt_date,track,content_md&qt_date=eq.${encodeURIComponent(date)}&track=eq.${encodeURIComponent(track)}&limit=1`
+    `qt_entries?select=qt_date,track,content_md,bible_ref,media_url,speaker&qt_date=eq.${encodeURIComponent(date)}&track=eq.${encodeURIComponent(track)}&limit=1`
   );
   return rows[0] || null;
 }
@@ -95,4 +95,27 @@ export async function deleteComment(id, deleteHash) {
     { method: 'DELETE', prefer: 'return=representation' }
   );
   return rows.length;
+}
+
+// ── 유튜브 검색 캐시 ──
+export async function getVideos(date) {
+  const rows = await rest(`qt_videos?select=query,items,fetched_at&qt_date=eq.${encodeURIComponent(date)}&limit=1`);
+  return rows[0] || null;
+}
+
+export async function saveVideos(date, query, items) {
+  await rest('qt_videos?on_conflict=qt_date', {
+    method: 'POST',
+    body: { qt_date: date, query, items, fetched_at: new Date().toISOString() },
+    prefer: 'resolution=merge-duplicates,return=minimal',
+  });
+}
+
+// 기존 행에 오디오 정보만 채우기 (1회용 백필)
+export async function setMedia(date, mediaUrl, speaker) {
+  await rest(`qt_entries?qt_date=eq.${encodeURIComponent(date)}`, {
+    method: 'PATCH',
+    body: { media_url: mediaUrl, speaker },
+    prefer: 'return=minimal',
+  });
 }

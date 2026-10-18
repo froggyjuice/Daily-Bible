@@ -90,10 +90,17 @@
 
       <!-- 본문 바로가기 (날짜 선택 시 표시) -->
       <div class="passage-actions" id="passage-actions" style="display:none">
-        <button class="chip" onclick="searchPassage('youtube')" title="유튜브에서 본문 찾기">▶ 유튜브</button>
+        <button class="chip" id="btn-audio" onclick="toggleAudio()" title="성서유니온 공식 오디오 (본문낭독 + 해설)" style="display:none">🎧 듣기</button>
+        <button class="chip" onclick="openVideos()" title="본문 관련 유튜브 영상 보기">▶ 유튜브</button>
         <button class="chip" onclick="searchPassage('web')" title="웹에서 본문 검색">🔍 검색</button>
         <button class="chip" onclick="sharePassage()" title="이 본문 링크 공유">🤝 같이 읽어요</button>
         <button class="chip" id="btn-godpeople" onclick="openGodpeople()" title="갓피플성경 앱에서 읽기" style="display:none">📱 갓피플성경</button>
+      </div>
+
+      <!-- 공식 오디오 (🎧 듣기로 열고 닫음) -->
+      <div class="audio-bar" id="audio-bar" style="display:none">
+        <audio id="qt-audio" controls preload="none"></audio>
+        <div class="audio-speaker" id="audio-speaker"></div>
       </div>
 
       <div class="content-panels">
@@ -151,6 +158,18 @@
       <div class="login-test-result error" id="login-error"></div>
     </div>
   </form>
+
+  <!-- 유튜브 영상 (화면 안 재생) -->
+  <div class="login-modal-backdrop" id="video-backdrop" style="display:none" onclick="closeVideos()"></div>
+  <div class="video-sheet" id="video-sheet" style="display:none" role="dialog" aria-label="유튜브 영상">
+    <div class="video-sheet-header">
+      <span class="video-query" id="video-query"></span>
+      <button class="video-close" onclick="closeVideos()" aria-label="닫기">✕</button>
+    </div>
+    <div class="video-frame"><iframe id="video-iframe" title="유튜브 영상" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
+    <ul class="video-list" id="video-list"></ul>
+    <a class="video-more" id="video-more" target="_blank" rel="noopener">유튜브에서 더 보기 ↗</a>
+  </div>
 
   <div class="toast-container" id="toast-container"></div>
 

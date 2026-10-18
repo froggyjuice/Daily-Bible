@@ -58,6 +58,8 @@ export async function runScrape({ source, dates, lookback = 30, force = false, l
         content_md: toMarkdown(qt),
         scraped_at: new Date().toISOString(),
         scraped_by: source,
+        media_url: qt.mediaUrl,
+        speaker: qt.speaker,
       });
       result.scraped.push(`${date}:${track}`);
       log(`[성공] ${date} ${track} — ${qt.title}`);

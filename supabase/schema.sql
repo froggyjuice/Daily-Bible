@@ -10,7 +10,9 @@ create table if not exists public.qt_entries (
   bible_ref  text,
   content_md text        not null,
   scraped_at timestamptz not null default now(),
-  scraped_by text,                       -- 'vercel-cron' | 'vercel-manual' | 'local' | 'migration'
+  scraped_by text,                       -- 'vercel-cron' | 'vercel-manual' | 'vercel-visit' | 'local' | 'migration'
+  media_url  text,                       -- 성서유니온 공식 오디오 mp3 (매일성경/순 공통)
+  speaker    text,                       -- '본문낭독:…|오디오해설:…'
   primary key (qt_date, track)
 );
 
@@ -43,3 +45,14 @@ create index if not exists qt_comments_date on public.qt_comments (qt_date, crea
 
 alter table public.qt_comments enable row level security;
 revoke all on public.qt_comments from anon, authenticated;
+
+-- ── 유튜브 검색 결과 캐시 (날짜별 — API 할당량 절약) ──
+create table if not exists public.qt_videos (
+  qt_date    date        primary key,
+  query      text        not null,
+  items      jsonb       not null,            -- [{ id, title, channel, thumb, published }]
+  fetched_at timestamptz not null default now()
+);
+
+alter table public.qt_videos enable row level security;
+revoke all on public.qt_videos from anon, authenticated;
