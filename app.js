@@ -526,20 +526,22 @@ function clearPanels() {
 // ═══════════════════════════════════════════
 //  책 펼침면 — 넓은 화면은 양쪽 쪽, 좁은 화면은 옆으로 넘김
 // ═══════════════════════════════════════════
-function goPage(idx) {
+// 쪽 순서: 왼쪽(첫 쪽) = 해설, 오른쪽(둘째 쪽) = 본문
+const PAGE_ORDER = ['haeseol', 'bonmun'];
+
+function goPage(name) {
   // scroll-snap 컨테이너에서는 scrollTo(smooth) 가 멈추는 경우가 있어 scrollIntoView 사용
-  document.getElementById(idx ? 'page-haeseol' : 'page-bonmun')
+  document.getElementById(`page-${name}`)
     .scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
 }
 
 function syncPagePills() {
   const book = document.getElementById('book');
   const idx = book.clientWidth ? Math.round(book.scrollLeft / book.clientWidth) : 0;
-  document.getElementById('pill-bonmun').classList.toggle('active', idx === 0);
-  document.getElementById('pill-haeseol').classList.toggle('active', idx === 1);
+  PAGE_ORDER.forEach((name, i) => document.getElementById(`pill-${name}`).classList.toggle('active', idx === i));
 }
 
-// 날짜를 바꾸면 두 쪽 모두 맨 위, 좁은 화면은 본문 쪽부터
+// 날짜를 바꾸면 두 쪽 모두 맨 위, 좁은 화면은 첫 쪽(해설)부터
 function resetPages() {
   const book = document.getElementById('book');
   book.scrollLeft = 0;
