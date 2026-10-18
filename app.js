@@ -1105,22 +1105,42 @@ function searchPassage(kind) {
   window.open(url, '_blank', 'noopener');
 }
 
-async function sharePassage() {
-  if (!currentDate) return;
+// 공유 문구: 권유 멘트 + 날짜·제목·본문 위치 + 본문 전체 + 링크
+function buildShareText() {
   const d = new Date(currentDate + 'T00:00:00Z');
   const days = ['일','월','화','수','목','금','토'];
   const label = currentVersion === 'soon' ? '매일성경 순' : '매일성경';
-  const title = currentBookInfo?.title ? ` "${currentBookInfo.title}"` : '';
-  const text = `같이 읽어요 📖\n${d.getUTCMonth() + 1}/${d.getUTCDate()} (${days[d.getUTCDay()]}) ${label}${title}\n${passageRef()}`;
+  const title = currentBookInfo?.title ? ` 「${currentBookInfo.title}」` : '';
   const url = `${location.origin}/?date=${currentDate}${currentVersion === 'soon' ? '&v=soon' : ''}`;
+  const verses = [...document.querySelectorAll('#bonmun-body .verse-line')]
+    .map(el => `${el.dataset.verseNum} ${el.querySelector('.verse-text').textContent.trim()}`);
 
+  return [
+    '📖 오늘 말씀, 같이 읽어요!',
+    '',
+    `${d.getUTCMonth() + 1}/${d.getUTCDate()} (${days[d.getUTCDay()]}) ${label}${title}`,
+    passageRef(),
+    '',
+    ...verses,
+    '',
+    '하루 한 본문, 함께 읽고 묵상해요 🙏',
+    '해설과 나눔은 아래 링크에서 같이 볼 수 있어요.',
+    `👉 ${url}`,
+  ].join('\n');
+}
+
+async function sharePassage() {
+  if (!currentDate) return;
+  const text = buildShareText();
+
+  // 링크는 문구 끝에 이미 들어 있음 — url 을 따로 넘기면 앱에 따라 링크가 두 번 붙음
   if (navigator.share) {
-    try { await navigator.share({ title: '매일성경', text, url }); }
+    try { await navigator.share({ text }); }
     catch (e) { if (e.name !== 'AbortError') showToast('공유 실패: ' + e.message, 'error'); }
     return;
   }
-  await writeClipboard(`${text}\n${url}`);
-  showToast('🔗 공유 문구와 링크를 복사했어요', 'success');
+  await writeClipboard(text);
+  showToast('🔗 본문과 링크를 복사했어요 — 붙여넣어 보내세요', 'success');
 }
 
 // 갓피플성경은 특정 본문으로 바로 가는 공개 링크가 없어서, 본문 위치를 복사한 뒤 앱을 연다
