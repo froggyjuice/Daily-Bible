@@ -48,6 +48,13 @@
       <button class="theme-btn" id="theme-btn-autumn" onclick="pickTheme('autumn')" title="가을">🍂</button>
       <button class="theme-btn" id="theme-btn-winter" onclick="pickTheme('winter')" title="겨울">☃️</button>
     </div>
+
+    <!-- 🗺️ 천로역정 순례길 (헤더 오른쪽 · 누르면 순례길 창) -->
+    <button class="jr-open" id="jr-open" onclick="openPilgrim()" aria-label="천로역정 순례길 열기">
+      <span class="jr-avatar" id="jr-avatar">🧑</span>
+      <span class="jr-mini">🗺️ 천로역정</span>
+      <span class="jr-count" id="jr-count">0/3</span>
+    </button>
   </header>
 
   <!-- ── 메인 레이아웃 ── -->
@@ -60,6 +67,7 @@
         <div class="sidebar-header">
           <span class="sidebar-title">📅 스크랩 목록</span>
           <div class="sidebar-header-right">
+            <button class="view-btn" id="btn-refresh" onclick="refreshData()" title="빠진 날짜 스크랩" aria-label="빠진 날짜 스크랩">🔄️</button>
             <button class="view-btn" id="btn-today" onclick="goToToday()" title="오늘로 가기">오늘</button>
             <div class="view-toggle-group" role="group" aria-label="보기 방식">
               <button class="view-btn active" id="view-btn-list"     onclick="switchView('list')"     title="목록">☰</button>
@@ -83,7 +91,6 @@
           <div class="cal-grid" id="cal-grid"></div>
         </div>
 
-        <button class="sidebar-install" id="btn-install" onclick="installApp()" style="display:none">📲 앱으로 설치하기</button>
       </div>
     </aside>
 
@@ -91,7 +98,6 @@
       <div class="tab-header" id="tab-header">
         <div class="tab-meta" id="content-meta">날짜를 선택하세요</div>
         <div class="tabs">
-          <button class="view-btn" id="btn-refresh" onclick="refreshData()" title="빠진 날짜 스크랩">🔄️</button>
           <!-- 좁은 화면: 책을 넘기듯 본문 ↔ 해설 쪽 이동 -->
           <button class="tab-btn page-pill active" id="pill-haeseol" onclick="goPage('haeseol')">📝 해설</button>
           <button class="tab-btn page-pill"        id="pill-bonmun"  onclick="goPage('bonmun')">📖 본문</button>
@@ -109,29 +115,13 @@
               <button class="menu-item" onclick="searchPassage('web'); closeMore()" role="menuitem">🔍 검색</button>
               <button class="menu-item" onclick="sharePassage(); closeMore()" role="menuitem">🤝 같이 읽어요</button>
               <button class="menu-item" id="btn-godpeople" onclick="openGodpeople(); closeMore()" role="menuitem" style="display:none">📱 갓피플성경</button>
+              <!-- 설치한 앱으로 열었으면 숨김 (initInstall) -->
+              <button class="menu-item" id="btn-install" onclick="installApp(); closeMore()" role="menuitem" style="display:none">📲 앱으로 설치하기</button>
             </div>
           </div>
         </div>
       </div>
       <div class="refresh-status" id="refresh-status" style="display:none"></div>
-
-      <!-- 🗺️ 천로역정 순례길 띠 — 지금 위치 · 오늘의 걸음 (누르면 순례길 창) -->
-      <div class="journey" id="journey">
-        <button class="jr-open" id="jr-open" onclick="openPilgrim()" aria-label="천로역정 순례길 열기">
-          <span class="jr-avatar" id="jr-avatar">🧑</span>
-          <span class="jr-text">
-            <b id="jr-where">🗺️ 천로역정 순례길</b>
-            <small id="jr-sub"></small>
-            <span class="jr-bar"><i id="jr-fill"></i></span>
-          </span>
-        </button>
-        <div class="jr-today" role="group" aria-label="오늘의 걸음">
-          <button class="jr-step" id="jr-read" onclick="openPilgrim()" title="오늘 말씀 열기 (저절로)">📖</button>
-          <button class="jr-step" id="jr-note" onclick="pilgrimGoNote()" title="메모나 나눔 남기기">✏️</button>
-          <button class="jr-step" id="jr-share" onclick="pilgrimGoShare()" title="말씀 공유하기">🤝</button>
-          <span class="jr-count" id="jr-count">0/3</span>
-        </div>
-      </div>
 
       <!-- 앱 설치 안내 (설치 전 + 닫지 않았을 때만) -->
       <div class="install-banner" id="install-banner" style="display:none">

@@ -154,7 +154,7 @@ function pilgrimGoShare() {
 
 
 // ═══════════════════════════════════════════
-//  책 위 순례길 띠 + 순례길 창 그리기
+//  헤더 순례길 버튼 + 순례길 창 그리기
 // ═══════════════════════════════════════════
 function renderPilgrim() {
   const s = pgLoad();
@@ -165,7 +165,7 @@ function renderPilgrim() {
   const block = pgBlockStop(s);
   const today = s.days[todayKST()] || [];
 
-  // ── 띠 ──
+  // ── 헤더 버튼 (지금 상태는 툴팁으로) ──
   document.getElementById('jr-avatar').innerHTML = pgAvatar(s);
   let where, sub;
   if (pgFinished(s)) {
@@ -182,15 +182,10 @@ function renderPilgrim() {
     sub = next ? `${next.icon} ${next.name}까지 ${next.cell - pos}칸` : '';
     if (block && s.steps > pos) sub += ` · 👣 ${s.steps - pos} 모아 둠`;
   }
-  document.getElementById('jr-where').textContent = where;
-  document.getElementById('jr-sub').textContent = sub;
-  document.getElementById('jr-fill').style.width = `${(pos / PILGRIM_END) * 100}%`;
-  document.getElementById('jr-open').classList.toggle('alert', !!pending);
-  Object.keys(PG_KIND).forEach(k => {
-    const btn = document.getElementById(`jr-${k}`);
-    btn.classList.toggle('done', today.includes(k));
-    btn.setAttribute('aria-pressed', today.includes(k));
-  });
+  const btn = document.getElementById('jr-open');
+  btn.title = sub ? `${where} · ${sub}` : where;
+  btn.setAttribute('aria-label', `천로역정 순례길 열기 — ${btn.title} · 오늘 걸음 ${today.length}/3`);
+  btn.classList.toggle('alert', !!pending);
   document.getElementById('jr-count').textContent = `${today.length}/3`;
 
   // ── 창이 열려 있으면 지도도 ──

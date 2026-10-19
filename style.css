@@ -1226,9 +1226,8 @@ html, body {
 .dock-section { max-width: 640px; margin: 10px auto 0; }
 .dock-section .nanum-title { padding-right: 34px; }
 
-/* 좁은 화면에서 메모·나눔 입력 중(키보드): 띠·배너는 숨기고, 칸이 먼저 자리 잡은 뒤 남는 높이를 책이 씀 */
+/* 좁은 화면에서 메모·나눔 입력 중(키보드): 배너는 숨기고, 칸이 먼저 자리 잡은 뒤 남는 높이를 책이 씀 */
 @media (max-width: 900px) {
-  body.typing .journey,
   body.typing .install-banner,
   body.typing .audio-bar { display: none !important; }
   body.typing .dock.open { flex-shrink: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -1254,6 +1253,7 @@ html, body {
   .book::after { display: none; }
   .page { flex: 0 0 100%; scroll-snap-align: start; padding: 16px 16px 40px; }
   .page-pill { display: inline-block; }
+  .page-label { display: none; }   /* 위 📝 해설 / 📖 본문 버튼과 겹치므로 */
   .dock { margin: 0; border-radius: 0; border-left: none; border-right: none; border-top: 1px solid var(--border); }
   .dock-drawer { padding: 4px 14px 14px; max-height: 55dvh; }
 }
@@ -1284,19 +1284,6 @@ html, body {
   flex-shrink: 0;
 }
 .install-close:hover, .modal-close:hover { color: var(--red); border-color: var(--red); }
-.sidebar-install {
-  flex-shrink: 0;
-  margin: 8px;
-  padding: 9px;
-  background: var(--surface-2);
-  border: 1px dashed var(--gold-dim);
-  border-radius: var(--radius-sm);
-  color: var(--gold-light);
-  font-size: .8rem;
-  font-family: inherit;
-  cursor: pointer;
-}
-.sidebar-install:hover { background: var(--gold-glow); }
 
 .install-modal { width: 440px; max-height: 86dvh; }
 .install-modal .login-modal-header { flex-shrink: 0; }
@@ -1442,76 +1429,69 @@ html, body {
   100% { transform: translateY(-105vh) rotate(40deg); opacity: .2; }
 }
 
-/* ── 🗺️ 순례길 띠 (책 위, 항상 보임) ───────── */
-.journey {
-  display: flex; align-items: center; gap: 8px;
-  margin: 12px 18px 0;
-  padding: 6px 8px 6px 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  flex-shrink: 0;
-}
+/* ── 🗺️ 순례길 버튼 (헤더 오른쪽) ───────────── */
 .jr-open {
-  flex: 1; min-width: 0;
-  display: flex; align-items: center; gap: 10px;
-  background: none; border: none; border-radius: 10px;
-  padding: 2px 4px;
-  font-family: inherit; color: var(--text); text-align: left;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+  height: 36px;
+  padding: 0 12px 0 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-family: inherit; color: var(--text);
   cursor: pointer;
+  transition: border-color .15s;
 }
-.jr-open:hover .jr-avatar { transform: scale(1.06); }
+.jr-open:hover { border-color: var(--gold-dim); }
 .jr-avatar, .pg-status-avatar {
   position: relative;
   flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--gold-glow);
+  white-space: nowrap;
+  letter-spacing: -.15em;
+}
+.jr-avatar {
+  min-width: 28px; height: 28px;
+  padding: 0 4px;
+  border-radius: 14px;
+  font-size: 1rem;
+}
+.pg-status-avatar {
   min-width: 42px; height: 42px;
   padding: 0 6px;
   border-radius: 21px;
-  background: var(--gold-glow);
-  display: flex; align-items: center; justify-content: center;
   font-size: 1.45rem;
-  white-space: nowrap;
-  letter-spacing: -.15em;
-  transition: transform .15s;
 }
 .pg-burden {
   position: absolute; right: -5px; bottom: -3px;
   font-size: .78rem; font-style: normal; letter-spacing: 0;
 }
-.jr-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.jr-text b, .jr-text small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.jr-text b { font-size: .86rem; color: var(--gold-light); }
-.jr-text small { font-size: .72rem; color: var(--text-2); }
-.jr-bar { height: 5px; margin-top: 2px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
-.jr-bar i { display: block; height: 100%; width: 0; background: var(--gold); border-radius: 3px; transition: width .6s ease; }
+.jr-avatar .pg-burden { font-size: .58rem; right: -4px; bottom: -3px; }
+.jr-mini { font-size: .8rem; font-weight: 600; color: var(--gold-light); white-space: nowrap; }
+.jr-count { font-size: .72rem; color: var(--text-3); font-family: 'Inter', sans-serif; }
+/* 새 이야기 · 관문이 기다리면 아바타가 두근두근 + 빨간 점 */
 .jr-open.alert .jr-avatar { animation: jrPulse 1.6s ease-in-out infinite; }
-.jr-open.alert small { color: var(--gold); font-weight: 600; }
+.jr-open.alert .jr-avatar::after {
+  content: '';
+  position: absolute; top: -2px; right: -2px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  border: 1.5px solid var(--surface-2);
+}
 @keyframes jrPulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
   50%      { box-shadow: 0 0 0 7px var(--gold-glow); }
 }
-.jr-today { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-.jr-step {
-  width: 34px; height: 34px;
-  border-radius: 50%;
-  border: 1.5px dashed var(--gold-dim);
-  background: var(--page);
-  font-size: 1rem; line-height: 1;
-  cursor: pointer;
-  filter: grayscale(.7); opacity: .7;
-  transition: transform .1s, opacity .2s;
-}
-.jr-step:active { transform: scale(.92); }
-.jr-step.done { border-style: solid; border-color: var(--gold); background: var(--gold-glow); filter: none; opacity: 1; }
-.jr-count { min-width: 26px; text-align: center; font-size: .7rem; color: var(--text-3); font-family: 'Inter', sans-serif; }
-@media (max-width: 900px) {
-  .journey { margin: 8px 10px; }
-}
-@media (max-width: 480px) {
-  .journey { gap: 4px; padding: 5px 6px 5px 4px; }
-  .jr-avatar { min-width: 36px; height: 36px; font-size: 1.2rem; }
-  .jr-step { width: 30px; height: 30px; font-size: .88rem; }
-  .jr-count { display: none; }
+/* 좁은 화면: 아바타 + 오늘 n/3 만 */
+@media (max-width: 768px) {
+  .header { gap: 6px; }
+  .version-toggle-group { margin-left: 2px; }
+  .jr-open { height: 32px; gap: 4px; padding: 0 8px 0 2px; }
+  .jr-mini { display: none; }
+  .jr-count { font-size: .64rem; }
 }
 
 /* ── 🗺️ 순례길 창 ──────────────────────────── */
