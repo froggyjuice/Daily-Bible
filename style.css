@@ -334,7 +334,7 @@ html, body {
 .layout {
   display: flex;
   height: 100vh;
-  height: 100dvh;
+  height: calc(100dvh - var(--kb, 0px));   /* --kb: 아이폰에서 키보드가 가린 높이 (app.js syncKeyboard) */
   padding-top: var(--header-h);
 }
 
@@ -1225,6 +1225,15 @@ html, body {
 .dock-close { position: absolute; top: 8px; right: 10px; z-index: 1; }
 .dock-section { max-width: 640px; margin: 10px auto 0; }
 .dock-section .nanum-title { padding-right: 34px; }
+
+/* 좁은 화면에서 메모·나눔 입력 중(키보드): 띠·배너는 숨기고, 칸이 먼저 자리 잡은 뒤 남는 높이를 책이 씀 */
+@media (max-width: 900px) {
+  body.typing .journey,
+  body.typing .install-banner,
+  body.typing .audio-bar { display: none !important; }
+  body.typing .dock.open { flex-shrink: 1; min-height: 0; display: flex; flex-direction: column; }
+  body.typing .dock-drawer { max-height: none; min-height: 0; flex: 1; }
+}
 
 /* 더보기 메뉴: 메모 · 나눔 · 책갈피 와 나머지 사이 구분선 */
 .menu-sep { height: 1px; background: var(--border); margin: 4px 6px; }

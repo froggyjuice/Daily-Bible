@@ -579,6 +579,34 @@ function toggleDock(which) {
   if (dockOpen === 'bookmarks') renderBookmarks();
 }
 
+// ── 모바일 키보드에 메모·나눔 입력칸이 가리지 않게 ──
+// - 칸 안에 입력 중이면 body.typing → 좁은 화면에서는 순례길 띠·배너를 숨기고 책보다 칸을 먼저 보여줌
+// - 아이폰 Safari 는 키보드가 떠도 화면 높이가 그대로라, 보이는 높이(visualViewport)만큼 레이아웃을 줄임(--kb)
+//   (안드로이드 크롬은 viewport 의 interactive-widget=resizes-content 로 레이아웃이 저절로 줄어듦)
+function syncKeyboard() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+  const open = kb > 80 && document.body.classList.contains('typing');
+  document.documentElement.style.setProperty('--kb', open ? `${kb}px` : '0px');
+  if (open && window.scrollY) window.scrollTo(0, 0);   // Safari 가 화면을 밀어 올린 것을 되돌림
+  const el = document.activeElement;
+  if (document.body.classList.contains('typing') && el?.closest('.dock')) el.scrollIntoView({ block: 'nearest' });
+}
+
+document.addEventListener('focusin', e => {
+  if (!e.target.closest('.dock textarea, .dock input')) return;
+  document.body.classList.add('typing');
+  setTimeout(syncKeyboard, 50);
+  setTimeout(syncKeyboard, 400);   // 키보드가 다 올라온 뒤 한 번 더
+});
+document.addEventListener('focusout', e => {
+  if (e.relatedTarget?.closest?.('.dock textarea, .dock input')) return;
+  document.body.classList.remove('typing');
+  document.documentElement.style.setProperty('--kb', '0px');
+});
+window.visualViewport?.addEventListener('resize', syncKeyboard);
+
 
 // ═══════════════════════════════════════════
 //  캘린더
