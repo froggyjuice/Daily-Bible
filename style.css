@@ -745,7 +745,7 @@ html, body {
   flex-shrink: 0;
 }
 
-/* ── 암호 입력 모달 ─────────────────────────────── */
+/* ── 공용 모달 (출석도장·퍼즐·설치 안내) ─────────────────────────────── */
 .login-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -802,31 +802,11 @@ html, body {
   margin-bottom: 6px;
 }
 
-.login-input {
-  width: 100%;
-  padding: 8px 12px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-size: .84rem;
-  font-family: 'Inter', 'Noto Sans KR', sans-serif;
-  outline: none;
-  transition: border-color .2s;
-}
-.login-input:focus { border-color: var(--gold); }
-.login-input::placeholder { color: var(--text-3); }
-
 .login-help {
   font-size: .72rem;
   color: var(--text-3);
   margin: 8px 0 16px;
   line-height: 1.6;
-}
-
-.login-actions {
-  display: flex;
-  gap: 8px;
 }
 
 .login-btn {
@@ -849,14 +829,6 @@ html, body {
   font-weight: 600;
 }
 .login-btn.primary:hover { opacity: .9; }
-
-.login-test-result {
-  margin-top: 12px;
-  font-size: .76rem;
-  color: var(--text-2);
-  min-height: 1.2em;
-}
-.login-test-result.error { color: var(--red); }
 
 /* ── 절 복사 기능 ─────────────────────────── */
 .verse-group {

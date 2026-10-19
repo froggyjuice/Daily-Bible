@@ -1,6 +1,6 @@
 // 매일성경 서비스 워커 — 앱 설치(홈 화면/데스크톱)를 위한 최소 구성
 // - 화면 파일(HTML/CSS/JS/아이콘)만 "네트워크 우선, 끊기면 캐시"로 보관
-// - /api/* (암호 쿠키·본문 데이터)는 절대 캐시하지 않고 항상 네트워크로
+// - /api/* (본문 데이터)는 절대 캐시하지 않고 항상 네트워크로
 const CACHE = 'qt-shell-v3';
 const SHELL = ['/', '/style.css', '/app.js', '/favicon.svg', '/manifest.webmanifest', '/icons/icon-192.png'];
 

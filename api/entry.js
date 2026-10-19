@@ -1,9 +1,7 @@
-import { requireAuth } from './_lib/auth.js';
 import { getEntry } from './_lib/db.js';
 import { TRACKS, todayKst } from './_lib/scrape.js';
 
 export default async function handler(req, res) {
-  if (!requireAuth(req, res)) return;
 
   const { date, track = 'main' } = req.query;
   if (!TRACKS[track] || !/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {

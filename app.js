@@ -1,6 +1,6 @@
 /* ────────────────────────────────────────────
    매일성경 — Vercel + Supabase 버전
-   데이터는 /api/entries, /api/entry (암호 쿠키 필요) 에서 로드
+   데이터는 /api/entries, /api/entry 에서 로드
    ──────────────────────────────────────────── */
 
 // ── 전역 상태 ────────────────────────────────
@@ -214,7 +214,7 @@ async function loadEntries() {
 
     renderSidebar(entries);
 
-    // 암호를 통과해 데이터를 처음 불러왔을 때 출석 도장
+    // 데이터를 처음 불러왔을 때 출석 도장
     if (!attendanceReady) { attendanceReady = true; stampAttendance(); }
 
     // 공유 링크 날짜 → 없으면 최신(= 오늘, 서버가 오늘 이후는 내려주지 않음)
@@ -233,7 +233,6 @@ async function loadEntries() {
     }
 
   } catch (e) {
-    if (e instanceof AuthRequired) return;
     showToast('데이터 로드 실패: ' + e.message, 'error');
     console.error(e);
   }
@@ -306,7 +305,6 @@ async function selectDate(dateStr) {
     hymnBtn.textContent = currentHymn ? `🎵 찬송 ${currentHymn}장` : '🎵 찬송';
     document.getElementById('more-wrap').style.display = currentBookInfo ? '' : 'none';
   } catch (e) {
-    if (e instanceof AuthRequired) return;
     showToast('콘텐츠 로드 실패: ' + e.message, 'error');
   }
 }
@@ -653,7 +651,7 @@ async function refreshData() {
     await loadEntries();
     if (keep && entrySet.has(keep)) await selectDate(keep);
   } catch (e) {
-    if (!(e instanceof AuthRequired)) showToast('새로고침 실패: ' + e.message, 'error');
+    showToast('새로고침 실패: ' + e.message, 'error');
   } finally {
     btn.classList.remove('spinning');
     hideRefreshStatus();
@@ -671,61 +669,6 @@ function hideRefreshStatus() {
   if (el) { el.style.display = 'none'; el.textContent = ''; }
 }
 
-
-// ═══════════════════════════════════════════
-//  암호 입력
-// ═══════════════════════════════════════════
-class AuthRequired extends Error {}
-
-function showLogin() {
-  const modal = document.getElementById('login-modal');
-  const backdrop = document.getElementById('login-modal-backdrop');
-  if (modal.style.display === 'flex') return;
-  modal.style.display = 'flex';
-  backdrop.style.display = 'block';
-  setTimeout(() => {
-    modal.classList.add('active');
-    backdrop.classList.add('active');
-    document.getElementById('login-password').focus();
-  }, 10);
-}
-
-function hideLogin() {
-  const modal = document.getElementById('login-modal');
-  const backdrop = document.getElementById('login-modal-backdrop');
-  modal.classList.remove('active');
-  backdrop.classList.remove('active');
-  setTimeout(() => { modal.style.display = 'none'; backdrop.style.display = 'none'; }, 250);
-}
-
-async function submitLogin(event) {
-  event.preventDefault();
-  const input = document.getElementById('login-password');
-  const errEl = document.getElementById('login-error');
-  const btn = document.getElementById('login-submit');
-  btn.disabled = true;
-  errEl.textContent = '';
-  try {
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: input.value }),
-    });
-    if (!res.ok) {
-      errEl.textContent = res.status === 401 ? '암호가 올바르지 않습니다' : `오류 (${res.status})`;
-      input.select();
-      return;
-    }
-    input.value = '';
-    hideLogin();
-    currentDate = null;
-    await loadEntries();
-  } catch (e) {
-    errEl.textContent = '연결 실패: ' + e.message;
-  } finally {
-    btn.disabled = false;
-  }
-}
 
 function calPrev() {
   calMonth--;
@@ -965,7 +908,6 @@ async function loadComments(dateStr) {
     if (currentDate !== dateStr) return;
     renderComments(comments);
   } catch (e) {
-    if (e instanceof AuthRequired) return;
     list.innerHTML = '<li class="comment-empty">댓글을 불러오지 못했습니다</li>';
     setCommentCount(0);
   }
@@ -1034,7 +976,7 @@ async function submitComment(event) {
     await loadComments(currentDate);
     showToast('💬 등록했어요', 'success', 1800);
   } catch (e) {
-    if (!(e instanceof AuthRequired)) showToast('등록 실패: ' + e.message, 'error');
+    showToast('등록 실패: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
   }
@@ -1047,7 +989,7 @@ async function removeComment(id) {
     if (!res.ok) { showToast(res.error || '삭제 실패', 'error'); return; }
     await loadComments(currentDate);
   } catch (e) {
-    if (!(e instanceof AuthRequired)) showToast('삭제 실패: ' + e.message, 'error');
+    showToast('삭제 실패: ' + e.message, 'error');
   }
 }
 
@@ -1651,7 +1593,6 @@ function closeInstallGuide() {
 // allowErrorBody: 실패 응답이어도 JSON 본문을 그대로 돌려줌 (/api/scrape 결과 표시용)
 async function apiFetch(url, options, allowErrorBody = false) {
   const res = await fetch(url, { credentials: 'same-origin', ...options });
-  if (res.status === 401) { showLogin(); throw new AuthRequired(); }
   if (!res.ok && !allowErrorBody) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
 }

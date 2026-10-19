@@ -1,4 +1,3 @@
-import { requireAuth } from './_lib/auth.js';
 import { listDates } from './_lib/db.js';
 import { runScrape } from './_lib/job.js';
 import { TRACKS, todayKst } from './_lib/scrape.js';
@@ -6,7 +5,6 @@ import { TRACKS, todayKst } from './_lib/scrape.js';
 let lastVisitScrape = 0;
 
 export default async function handler(req, res) {
-  if (!requireAuth(req, res)) return;
 
   const track = req.query.track || 'main';
   if (!TRACKS[track]) return res.status(400).json({ error: 'invalid track' });

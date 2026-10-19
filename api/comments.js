@@ -3,7 +3,6 @@
 //   POST   /api/comments  { date, nickname, body, token }
 //   DELETE /api/comments?id=&token=
 import { createHash } from 'node:crypto';
-import { requireAuth } from './_lib/auth.js';
 import { listComments, insertComment, deleteComment } from './_lib/db.js';
 import { todayKst } from './_lib/scrape.js';
 
@@ -12,7 +11,6 @@ const validToken = t => typeof t === 'string' && /^[A-Za-z0-9_-]{16,128}$/.test(
 const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && d <= todayKst();
 
 export default async function handler(req, res) {
-  if (!requireAuth(req, res)) return;
   res.setHeader('Cache-Control', 'private, no-store');
 
   try {

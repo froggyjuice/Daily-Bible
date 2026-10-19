@@ -189,23 +189,6 @@
     </main>
   </div>
 
-  <!-- 암호 입력 모달 (API 가 401 을 돌려주면 표시) -->
-  <div class="login-modal-backdrop" id="login-modal-backdrop" style="display:none"></div>
-  <form class="login-modal" id="login-modal" style="display:none" onsubmit="submitLogin(event)">
-    <div class="login-modal-header">
-      <h3>✝ 매일성경</h3>
-    </div>
-    <div class="login-modal-body">
-      <label for="login-password">암호</label>
-      <input type="password" class="login-input" id="login-password" autocomplete="current-password" required>
-      <p class="login-help">한 번 입력하면 이 브라우저에서는 다시 묻지 않습니다.</p>
-      <div class="login-actions">
-        <button type="submit" class="login-btn primary" id="login-submit">들어가기</button>
-      </div>
-      <div class="login-test-result error" id="login-error"></div>
-    </div>
-  </form>
-
   <!-- 출석도장 -->
   <div class="login-modal-backdrop" id="attend-backdrop" style="display:none" onclick="closeAttendance()"></div>
   <div class="login-modal attend-modal" id="attend-modal" style="display:none" role="dialog" aria-label="출석도장">
@@ -289,8 +272,7 @@
         </ol>
       </section>
       <p class="login-help install-note">
-        설치한 앱은 브라우저와 저장 공간이 따로일 수 있어요(특히 아이폰). 처음 한 번은 <b>암호를 다시 입력</b>해야 하고,
-        브라우저에 적어 둔 <b>메모 · 책갈피는 앱으로 옮겨지지 않아요</b>.
+        설치한 앱은 브라우저와 저장 공간이 따로일 수 있어요(특히 아이폰). 브라우저에 적어 둔 <b>메모 · 책갈피는 앱으로 옮겨지지 않아요</b>.
       </p>
     </div>
   </div>
