@@ -6,8 +6,7 @@
 
 ```
 Vercel Cron (하루 1회, icn1) ─┐
-대시보드 🔄 버튼 (/api/scrape) ├─ api/_lib/job.js → api/_lib/scrape.js (fetch) → Supabase qt_entries (upsert)
-로컬 PC 로그온 (대체 경로)   ─┘
+대시보드 🔄 버튼 (/api/scrape) ┴─ api/_lib/job.js → api/_lib/scrape.js (fetch) → Supabase qt_entries (upsert)
                                         │
                      /api/entries · /api/entry  (암호 쿠키 필요)
                                         │
@@ -27,7 +26,7 @@ Vercel Cron (하루 1회, icn1) ─┐
 - **🧩 말씀 퍼즐** (⋯ 더보기): 그날 본문으로 하는 탭 퍼즐. 조각 맞추기(한 절을 어절 조각으로 섞음, 고른 절이 있으면 그 절) / 순서 맞추기(이어지는 5절을 섞음). 누를 때마다 채점, 💡 힌트, 시간·실수·힌트 기록, 맞히면 계절 아이콘이 떠오름. 날짜별 맞힌 개수는 localStorage `puzzle:{date}`.
 - **앱 설치 (PWA)**: `manifest.webmanifest` + `sw.js`(화면 파일만 네트워크 우선 캐시, `/api/*` 는 캐시 안 함) + `icons/`. 안드로이드·PC 크롬/엣지는 📲 설치하기 버튼으로 바로 설치, 아이폰은 Safari 공유 → 홈 화면에 추가(앱 안 가이드에서 기기별 안내). 설치 앱은 저장 공간이 따로일 수 있어 첫 실행 때 암호를 다시 입력.
 - **암호**: `SITE_PASSWORD`로 한 번 로그인하면 1년짜리 HttpOnly 쿠키가 발급되어, 같은 브라우저에서는 다시 묻지 않습니다. 암호를 바꾸면 기존 쿠키는 모두 무효가 됩니다.
-- **IP 차단**: `sum.su.or.kr`는 일부 해외/클라우드 IP를 막습니다(GitHub Actions 미국 러너에서 `ERR_CONNECTION_TIMED_OUT`). Vercel 함수는 서울(icn1)에서 돌며, 2026-10-18 테스트에서 5회 모두 정상 접속됐습니다. 그래도 막히는 날을 대비해 로컬 PC 자동화를 대체 경로로 둡니다(`scrape_runs` 테이블에서 실패 여부 확인).
+- **IP 차단**: `sum.su.or.kr`는 일부 해외/클라우드 IP를 막습니다(GitHub Actions 미국 러너에서 `ERR_CONNECTION_TIMED_OUT`). Vercel 함수는 서울(icn1)에서 돌며, 2026-10-18 테스트에서 5회 모두 정상 접속됐습니다. 빠진 날이 있으면 `scrape_runs` 테이블에서 실패 여부를 확인하고, 아래 로컬 CLI로 채웁니다.
 
 ## 환경변수
 
@@ -45,28 +44,17 @@ Vercel Cron (하루 1회, icn1) ─┐
 
 1. Supabase에서 서울(Northeast Asia — Seoul) 리전으로 프로젝트를 만들고, SQL Editor에서 `supabase/schema.sql`을 실행합니다.
 2. `.env.local`을 작성합니다.
-3. (기존 JSON이 있다면) `node --env-file=.env.local scripts/migrate.mjs`
-4. Vercel에 이 저장소를 연결하고 환경변수를 등록한 뒤 배포합니다.
+3. Vercel에 이 저장소를 연결하고 환경변수를 등록한 뒤 배포합니다.
 
-## 로컬 스크랩 / 백필
+## 수동 스크랩 / 백필 (로컬 CLI)
+
+Cron 이 빠뜨린 날짜를 채우거나 기간을 다시 받을 때 씁니다. 자동 실행은 없습니다.
 
 ```bash
 node --env-file=.env.local scripts/scrape.mjs                       # 최근 30일 ~ 오늘 중 빠진 날짜
 node --env-file=.env.local scripts/scrape.mjs --all                 # DB 최초 날짜부터 빠진 날짜 전부
 node --env-file=.env.local scripts/scrape.mjs --from 2026-01-01     # 특정 기간
 node --env-file=.env.local scripts/scrape.mjs --date 2026-10-12 --force
-```
-
-### 로그온 자동 실행 (Windows, 대체 경로)
-
-`auto_scrape.ps1`이 위 기본 명령을 실행하고 `logs/auto_scrape.log`에 기록합니다. 작업 스케줄러 등록 예시:
-
-```powershell
-$action = New-ScheduledTaskAction -Execute "powershell.exe" `
-  -Argument '-WindowStyle Hidden -ExecutionPolicy Bypass -File "<repo-path>\auto_scrape.ps1"'
-$trigger = New-ScheduledTaskTrigger -AtLogOn -User "<DOMAIN>\<user>"
-$trigger.Delay = "PT1M"
-Register-ScheduledTask -TaskName "DailyBibleAutoScrape" -Action $action -Trigger $trigger -RunLevel Limited
 ```
 
 ## 파일 구조
@@ -86,10 +74,8 @@ bible_scraper/
 │   ├── db.js             # Supabase PostgREST 최소 클라이언트
 │   └── auth.js           # 암호 쿠키
 ├── scripts/
-│   ├── scrape.mjs        # 로컬 CLI
-│   └── migrate.mjs       # 1회용 JSON → Supabase 이전
+│   └── scrape.mjs        # 수동 스크랩/백필 CLI
 ├── supabase/schema.sql  # 전체 스키마 (migrations/ 는 기존 DB에 추가로 적용할 변경분)
-├── auto_scrape.ps1       # 로그온 자동 실행 (대체 경로)
 ├── index.html · app.js · style.css · favicon.svg
 ├── manifest.webmanifest · sw.js · icons/   # 앱 설치(PWA)
 └── vercel.json           # icn1 리전, Cron(00:05 KST), 헤더

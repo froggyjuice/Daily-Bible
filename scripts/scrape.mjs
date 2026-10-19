@@ -1,4 +1,4 @@
-// 로컬 스크랩 CLI (Vercel Cron 이 막힐 때의 대체 경로 겸 수동 백필 도구)
+// 수동 스크랩/백필 CLI (Vercel Cron 이 빠뜨린 날짜를 채울 때)
 //
 //   node --env-file=.env.local scripts/scrape.mjs                 # 최근 30일 ~ 오늘 빠진 날짜
 //   node --env-file=.env.local scripts/scrape.mjs --all           # DB 최초 날짜부터 빠진 날짜 전부

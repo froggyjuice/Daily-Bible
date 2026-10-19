@@ -1,21 +1,5 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.egg-info/
-dist/
-build/
-
-# 가상환경
-venv/
-.venv/
-env/
-
-# 스크랩 결과물 — Supabase 로 이전됨, 저장소에 두지 않음 (저작권)
+# 스크랩 결과물 — Supabase 에만 저장, 저장소에 두지 않음 (저작권)
 data/
-output/
 
 # 환경설정
 .env
@@ -33,9 +17,6 @@ node_modules/
 # Windows
 Thumbs.db
 desktop.ini
-
-# Playwright 브라우저 캐시
-.playwright/
 
 # 로그
 *.log
