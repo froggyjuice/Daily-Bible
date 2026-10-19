@@ -1468,19 +1468,11 @@ html, body {
   position: absolute; right: -5px; bottom: -3px;
   font-size: .78rem; font-style: normal; letter-spacing: 0;
 }
-.jr-avatar .pg-burden { font-size: .58rem; right: -4px; bottom: -3px; }
+.jr-avatar .pg-burden { display: none; }   /* 헤더 버튼에서는 짐(🎒) 표시 생략 — 지도·상태 카드에만 */
 .jr-mini { font-size: .8rem; font-weight: 600; color: var(--gold-light); white-space: nowrap; }
 .jr-count { font-size: .72rem; color: var(--text-3); font-family: 'Inter', sans-serif; }
-/* 새 이야기 · 관문이 기다리면 아바타가 두근두근 + 빨간 점 */
+/* 새 이야기 · 관문이 기다리면 아바타가 두근두근 */
 .jr-open.alert .jr-avatar { animation: jrPulse 1.6s ease-in-out infinite; }
-.jr-open.alert .jr-avatar::after {
-  content: '';
-  position: absolute; top: -2px; right: -2px;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--red);
-  border: 1.5px solid var(--surface-2);
-}
 @keyframes jrPulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
   50%      { box-shadow: 0 0 0 7px var(--gold-glow); }
