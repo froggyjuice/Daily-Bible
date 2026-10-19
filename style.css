@@ -745,7 +745,7 @@ html, body {
   flex-shrink: 0;
 }
 
-/* ── 공용 모달 (출석도장·퍼즐·설치 안내) ─────────────────────────────── */
+/* ── 공용 모달 (순례길·설치 안내) ─────────────────────────────── */
 .login-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1309,16 +1309,8 @@ html, body {
   .install-banner { padding: 7px 12px; }
 }
 
-/* ── 🧩 말씀 퍼즐 ──────────────────────────── */
-.puzzle-modal { width: 560px; max-height: 88dvh; overflow: hidden; }
-.puzzle-modal .login-modal-header { flex-shrink: 0; }
-.puzzle-body { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-.puzzle-modes { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
-.puzzle-mode {
-  flex: 1; border: none; background: none; border-radius: 8px;
-  padding: 6px; font-size: .8rem; font-family: inherit; color: var(--text-2); cursor: pointer;
-}
-.puzzle-mode.active { background: var(--gold); color: var(--on-accent); font-weight: 600; }
+/* ── 🧩 말씀 퍼즐 (순례길 관문) ──────────────────────────── */
+.puzzle-body { display: flex; flex-direction: column; gap: 10px; }
 .puzzle-ref { font-size: .86rem; font-weight: 600; color: var(--gold-light); text-align: center; }
 .puzzle-guide { font-size: .78rem; color: var(--text-3); text-align: center; margin: -4px 0 0; }
 .puzzle-guide.done { color: var(--green); font-weight: 600; font-size: .84rem; }
@@ -1383,21 +1375,11 @@ html, body {
   100% { transform: translateY(-260px) scale(1.2) rotate(25deg); opacity: 0; }
 }
 
-@media (max-width: 768px) {
-  .puzzle-modal {
-    top: auto; bottom: 0; left: 0;
-    width: 100%; max-width: 100%;
-    max-height: 90dvh;
-    border-radius: var(--radius) var(--radius) 0 0;
-    transform: translateY(20px);
-  }
-  .puzzle-modal.active { transform: translateY(0); }
-}
-
-/* ── 맨 아래 저작권 · 제작 안내 (흐린 글씨) ── */
+/* ── 저작권 · 제작 안내 (흐린 글씨) — 각 쪽 내용 맨 끝, 끝까지 읽어야 보임 ── */
 .site-footer {
-  flex-shrink: 0;
-  padding: 2px 18px 8px;
+  margin-top: 40px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
   text-align: center;
   font-size: .64rem;
   line-height: 1.6;
@@ -1408,46 +1390,12 @@ html, body {
 .site-footer p { margin: 0; }
 .site-footer .ft-short { display: none; }
 @media (max-width: 900px) {
-  .site-footer {
-    font-size: .58rem;
-    padding: 2px 10px calc(4px + env(safe-area-inset-bottom));
-    background: var(--surface);
-  }
+  .site-footer { font-size: .6rem; }
   .site-footer .ft-long { display: none; }
-  .site-footer .ft-short { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .site-footer .ft-short { display: block; }
 }
 
-/* ── 📮 출석도장 ───────────────────────────── */
-.attend-modal { width: 400px; max-height: 88dvh; }
-.attend-modal .login-modal-header { flex-shrink: 0; }
-.attend-body { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-.attend-summary { text-align: center; }
-.attend-big b { font-size: 2.6rem; font-family: 'Inter', sans-serif; color: var(--gold-light); line-height: 1; }
-.attend-big span { font-size: .9rem; color: var(--text-2); margin-left: 4px; }
-.attend-sub { font-size: .74rem; color: var(--text-3); margin-top: 2px; }
-.attend-punch { display: flex; justify-content: center; gap: 10px; }
-.punch {
-  width: 42px; height: 42px;
-  border-radius: 50%;
-  border: 2px dashed var(--gold-dim);
-  display: flex; align-items: center; justify-content: center;
-  font-size: .72rem; color: var(--text-3);
-  font-family: 'Inter', sans-serif;
-}
-.punch.on { border-style: solid; border-color: var(--gold); background: var(--gold-glow); font-size: 0; }
-.punch.on::before { content: var(--bm-icon); font-size: 1.3rem; animation: stampIn .35s ease; }
-@keyframes stampIn { from { transform: scale(1.8) rotate(-20deg); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.attend-next { text-align: center; font-size: .8rem; color: var(--text-2); margin: 0; }
-.attend-grid { overflow: visible; padding: 4px 0; }
-.attend-grid .cal-cell { position: relative; }
-.attend-grid .cal-cell.stamped span { opacity: .35; }
-.attend-grid .cal-cell.stamped::after {
-  content: var(--bm-icon);
-  position: absolute;
-  font-size: 1.05rem;
-}
-
-/* 연속 5일 축하 */
+/* ── 축하 (화면 가득 계절 아이콘) ───────────── */
 .celebrate {
   position: fixed; inset: 0;
   z-index: 500;
@@ -1485,12 +1433,275 @@ html, body {
   100% { transform: translateY(-105vh) rotate(40deg); opacity: .2; }
 }
 
+/* ── 🗺️ 순례길 띠 (책 위, 항상 보임) ───────── */
+.journey {
+  display: flex; align-items: center; gap: 8px;
+  margin: 12px 18px 0;
+  padding: 6px 8px 6px 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+.jr-open {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 10px;
+  background: none; border: none; border-radius: 10px;
+  padding: 2px 4px;
+  font-family: inherit; color: var(--text); text-align: left;
+  cursor: pointer;
+}
+.jr-open:hover .jr-avatar { transform: scale(1.06); }
+.jr-avatar, .pg-status-avatar {
+  position: relative;
+  flex-shrink: 0;
+  min-width: 42px; height: 42px;
+  padding: 0 6px;
+  border-radius: 21px;
+  background: var(--gold-glow);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.45rem;
+  white-space: nowrap;
+  letter-spacing: -.15em;
+  transition: transform .15s;
+}
+.pg-burden {
+  position: absolute; right: -5px; bottom: -3px;
+  font-size: .78rem; font-style: normal; letter-spacing: 0;
+}
+.jr-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.jr-text b, .jr-text small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jr-text b { font-size: .86rem; color: var(--gold-light); }
+.jr-text small { font-size: .72rem; color: var(--text-2); }
+.jr-bar { height: 5px; margin-top: 2px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.jr-bar i { display: block; height: 100%; width: 0; background: var(--gold); border-radius: 3px; transition: width .6s ease; }
+.jr-open.alert .jr-avatar { animation: jrPulse 1.6s ease-in-out infinite; }
+.jr-open.alert small { color: var(--gold); font-weight: 600; }
+@keyframes jrPulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
+  50%      { box-shadow: 0 0 0 7px var(--gold-glow); }
+}
+.jr-today { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.jr-step {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--gold-dim);
+  background: var(--page);
+  font-size: 1rem; line-height: 1;
+  cursor: pointer;
+  filter: grayscale(.7); opacity: .7;
+  transition: transform .1s, opacity .2s;
+}
+.jr-step:active { transform: scale(.92); }
+.jr-step.done { border-style: solid; border-color: var(--gold); background: var(--gold-glow); filter: none; opacity: 1; }
+.jr-count { min-width: 26px; text-align: center; font-size: .7rem; color: var(--text-3); font-family: 'Inter', sans-serif; }
+@media (max-width: 900px) {
+  .journey { margin: 8px 10px; }
+}
+@media (max-width: 480px) {
+  .journey { gap: 4px; padding: 5px 6px 5px 4px; }
+  .jr-avatar { min-width: 36px; height: 36px; font-size: 1.2rem; }
+  .jr-step { width: 30px; height: 30px; font-size: .88rem; }
+  .jr-count { display: none; }
+}
+
+/* ── 🗺️ 순례길 창 ──────────────────────────── */
+.pilgrim-modal { width: 580px; max-height: 90dvh; overflow: hidden; }
+.pilgrim-modal .login-modal-header { flex-shrink: 0; gap: 8px; }
+.pilgrim-modal .login-modal-header h3 { flex: 1; }
+.pilgrim-body { overflow-y: auto; }
+
+/* 지금 상태 */
+.pg-status {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 14px;
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.pg-status-top { display: flex; align-items: center; gap: 10px; }
+.pg-status-name { display: block; font-size: .95rem; color: var(--gold-light); }
+.pg-status-cells { font-size: .72rem; color: var(--text-3); }
+.pg-status-desc { margin: 0; font-size: .82rem; line-height: 1.6; color: var(--text-2); }
+.pg-actions { display: flex; gap: 8px; }
+.pg-actions .login-btn { flex: 1; padding: 10px; font-size: .86rem; }
+.pg-go { animation: jrPulse 1.6s ease-in-out infinite; }
+
+/* 지도: 아래(출발)에서 위(천국 성문)로 */
+.pg-board-wrap {
+  margin-top: 12px;
+  max-height: 340px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(to top, var(--page), var(--surface-2));
+}
+.pg-board { position: relative; margin: 0 14px; }
+.pg-path { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pg-path polyline { fill: none; stroke-width: 6; stroke-linejoin: round; stroke-linecap: round; }
+.pg-path-todo { stroke: var(--border); stroke-dasharray: 1 11; }
+.pg-path-done { stroke: var(--gold-dim); }
+.pg-dot {
+  position: absolute;
+  width: 10px; height: 10px; margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border);
+}
+.pg-dot.reached { background: var(--gold-dim); border-color: var(--gold); }
+.pg-stop {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 40px; height: 40px; padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  filter: grayscale(1); opacity: .55;
+  z-index: 1;
+}
+.pg-stop.reached { filter: none; opacity: 1; border-color: var(--gold); background: var(--page); box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+.pg-stop.gate { animation: jrPulse 1.6s ease-in-out infinite; }
+.pg-stop-icon { font-size: 1.25rem; line-height: 1; }
+.pg-stop-lock { position: absolute; top: -7px; right: -9px; font-size: .72rem; }
+.pg-stop-name {
+  position: absolute; top: 100%; left: 50%;
+  transform: translateX(-50%);
+  max-width: 76px;
+  font-size: .56rem; color: var(--text-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  pointer-events: none;
+}
+.pg-me {
+  position: absolute;
+  margin-top: -16px;
+  font-size: 1.4rem;
+  white-space: nowrap;
+  letter-spacing: -.15em;
+  z-index: 3;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.25));
+  animation: pgBounce 1.2s ease-in-out infinite;
+}
+@keyframes pgBounce {
+  0%, 100% { transform: translate(-50%, -100%); }
+  50%      { transform: translate(-50%, calc(-100% - 5px)); }
+}
+
+/* 오늘의 걸음 · 순례 가방 */
+.pg-panel { margin-top: 14px; }
+.pg-panel h4 { margin-bottom: 6px; font-size: .82rem; color: var(--text); }
+.pg-panel h4 small { font-weight: 400; color: var(--text-3); margin-left: 4px; }
+.pg-mission {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 5px; padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--page);
+  font-size: .82rem;
+}
+.pg-mission.done { background: var(--gold-glow); border-color: var(--gold-dim); }
+.pg-mission-label { flex: 1; }
+.pg-mission-label small { color: var(--text-3); }
+.pg-mission-ok { color: var(--green); font-weight: 600; }
+.pg-item-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.pg-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 2px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 1.3rem;
+  opacity: .55;
+}
+.pg-item.has { opacity: 1; border-style: solid; border-color: var(--gold-dim); background: var(--page); }
+.pg-item small { font-size: .58rem; line-height: 1.2; text-align: center; color: var(--text-2); }
+
+/* 이야기 */
+.pg-scene-place { margin-bottom: 10px; text-align: center; font-size: .9rem; font-weight: 600; color: var(--gold-light); }
+.pg-scene-place span { display: block; font-size: 1.8rem; }
+.pg-scene {
+  min-height: 160px;
+  padding: 16px;
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.pg-speaker { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.pg-face {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--gold-glow);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.1rem;
+}
+.pg-face.pop { animation: pgPop .35s cubic-bezier(.2,1.4,.4,1); }
+@keyframes pgPop { from { transform: scale(.6); } to { transform: scale(1); } }
+.pg-name { font-size: .88rem; color: var(--gold-light); }
+.pg-line { margin: 0; font-family: 'Noto Serif KR', serif; font-size: .98rem; line-height: 1.85; color: var(--text); }
+.pg-line.narration { font-size: .93rem; color: var(--text-2); }
+.pg-ref { min-height: 1.3em; margin-top: 10px; text-align: center; font-size: .78rem; color: var(--text-2); }
+.pg-ref b { color: var(--gold-light); }
+.pg-scene-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.pg-dots { font-size: .72rem; color: var(--text-3); font-family: 'Inter', sans-serif; }
+.pg-scene-foot .login-btn { flex: none; padding: 9px 22px; font-size: .86rem; }
+
+/* 관문 */
+.pg-gate-head {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-bottom: 12px;
+  font-size: .95rem; color: var(--gold-light);
+}
+.pg-gate-head { flex-wrap: wrap; }
+.pg-gate-head small { color: var(--text-3); }
+.pg-gate-guide { flex-basis: 100%; margin: 0; text-align: center; font-size: .82rem; font-weight: 600; color: var(--text-2); }
+.pg-gate-icon { font-size: 1.6rem; }
+.pg-boss { display: inline-block; font-size: 3rem; line-height: 1; animation: pgFloat 2.4s ease-in-out infinite; }
+.pg-boss.hit { animation: pgHit .6s ease; }
+@keyframes pgFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes pgHit {
+  0%   { transform: none; filter: none; }
+  20%  { transform: translateX(-8px) rotate(-10deg); filter: brightness(1.8); }
+  40%  { transform: translateX(8px) rotate(10deg); }
+  60%  { transform: translateX(-5px); }
+  100% { transform: none; filter: none; }
+}
+.pg-hp { font-size: .9rem; letter-spacing: 2px; }
+.pg-question { margin: 0 0 12px; text-align: center; font-size: .95rem; font-weight: 600; color: var(--text); }
+.pg-options { display: flex; flex-direction: column; gap: 8px; }
+.pg-option {
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--page);
+  font-family: inherit; font-size: .88rem; color: var(--text); text-align: left;
+  cursor: pointer;
+}
+.pg-option:hover:not(:disabled) { border-color: var(--gold-dim); }
+.pg-option.right { border-color: var(--green); background: var(--gold-glow); font-weight: 600; }
+.pg-option.wrong { opacity: .5; text-decoration: line-through; animation: pzShake .35s ease; }
+.pg-option:disabled { cursor: default; }
+.pg-reply { margin: 12px 0 0; font-size: .84rem; line-height: 1.7; }
+.pg-reply:empty { display: none; }
+.pg-reply.ok, .pg-reply.retry { padding: 10px 12px; border-radius: var(--radius-sm); }
+.pg-reply.ok { background: var(--gold-glow); color: var(--text); }
+.pg-reply.retry { background: var(--surface-2); color: var(--text-2); }
+#pg-choice .pg-actions { margin-top: 12px; }
+.pg-nopassage { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; font-size: .86rem; color: var(--text-2); }
+.pg-nopassage .login-btn { flex: none; padding: 9px 20px; }
+
 @media (max-width: 768px) {
-  .attend-modal {
+  .pilgrim-modal {
     top: auto; bottom: 0; left: 0;
     width: 100%; max-width: 100%;
+    max-height: 92dvh;
     border-radius: var(--radius) var(--radius) 0 0;
     transform: translateY(20px);
   }
-  .attend-modal.active { transform: translateY(0); }
+  .pilgrim-modal.active { transform: translateY(0); }
+  .pilgrim-body { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+  .pg-item-grid { grid-template-columns: repeat(3, 1fr); }
 }

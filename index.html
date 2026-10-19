@@ -102,20 +102,36 @@
               <button class="menu-item" id="dock-btn-memo" onclick="toggleDock('memo'); closeMore()" role="menuitem">✏️ 메모</button>
               <button class="menu-item" id="dock-btn-nanum" onclick="toggleDock('nanum'); closeMore()" role="menuitem">💬 나눔<span class="tab-badge" id="comment-badge"></span></button>
               <button class="menu-item" id="dock-btn-bookmarks" onclick="toggleDock('bookmarks'); closeMore()" role="menuitem">🔖 책갈피<span class="tab-badge" id="bookmark-badge"></span></button>
-              <button class="menu-item" id="btn-attend" onclick="openAttendance(); closeMore()" role="menuitem">📮 출석도장</button>
               <div class="menu-sep" role="separator"></div>
               <button class="menu-item" id="btn-audio" onclick="toggleAudio(); closeMore()" role="menuitem" style="display:none">🎧 듣기 <small>공식 오디오</small></button>
               <button class="menu-item" id="btn-hymn" onclick="playHymn(); closeMore()" role="menuitem" style="display:none">🎵 찬송</button>
               <button class="menu-item" onclick="searchPassage('youtube'); closeMore()" role="menuitem">▶ 유튜브</button>
               <button class="menu-item" onclick="searchPassage('web'); closeMore()" role="menuitem">🔍 검색</button>
               <button class="menu-item" onclick="sharePassage(); closeMore()" role="menuitem">🤝 같이 읽어요</button>
-              <button class="menu-item" onclick="openPuzzle(); closeMore()" role="menuitem">🧩 말씀 퍼즐</button>
               <button class="menu-item" id="btn-godpeople" onclick="openGodpeople(); closeMore()" role="menuitem" style="display:none">📱 갓피플성경</button>
             </div>
           </div>
         </div>
       </div>
       <div class="refresh-status" id="refresh-status" style="display:none"></div>
+
+      <!-- 🗺️ 천로역정 순례길 띠 — 지금 위치 · 오늘의 걸음 (누르면 순례길 창) -->
+      <div class="journey" id="journey">
+        <button class="jr-open" id="jr-open" onclick="openPilgrim()" aria-label="천로역정 순례길 열기">
+          <span class="jr-avatar" id="jr-avatar">🧑</span>
+          <span class="jr-text">
+            <b id="jr-where">🗺️ 천로역정 순례길</b>
+            <small id="jr-sub"></small>
+            <span class="jr-bar"><i id="jr-fill"></i></span>
+          </span>
+        </button>
+        <div class="jr-today" role="group" aria-label="오늘의 걸음">
+          <button class="jr-step" id="jr-read" onclick="openPilgrim()" title="오늘 말씀 열기 (저절로)">📖</button>
+          <button class="jr-step" id="jr-note" onclick="pilgrimGoNote()" title="메모나 나눔 남기기">✏️</button>
+          <button class="jr-step" id="jr-share" onclick="pilgrimGoShare()" title="말씀 공유하기">🤝</button>
+          <span class="jr-count" id="jr-count">0/3</span>
+        </div>
+      </div>
 
       <!-- 앱 설치 안내 (설치 전 + 닫지 않았을 때만) -->
       <div class="install-banner" id="install-banner" style="display:none">
@@ -139,6 +155,14 @@
             <p>좌측에서 날짜를 선택하세요</p>
           </div>
           <div class="markdown-body" id="haeseol-body"></div>
+          <!-- 저작권 · 제작 안내 — 쪽 맨 아래까지 읽으면 보임 -->
+          <footer class="site-footer">
+            <!-- 넓은 화면: 전체 문구 / 좁은 화면: 같은 내용을 두 줄로 줄임 -->
+            <p class="ft-long">성경 본문 「성경전서 개역개정판」 © 재단법인 대한성서공회 · 해설 © 사단법인 성서유니온선교회</p>
+            <p class="ft-long">이 페이지는 비영리 목적의 성경 묵상과 나눔을 위해 만들었습니다 · 만든 이 <a href="mailto:ocean3251@naver.com">ocean3251@naver.com</a></p>
+            <p class="ft-short">개역개정 © 대한성서공회 · 해설 © 성서유니온선교회</p>
+            <p class="ft-short">비영리 묵상 · 나눔용 · 만든 이 <a href="mailto:ocean3251@naver.com">ocean3251@naver.com</a></p>
+          </footer>
         </section>
         <section class="page page-right" id="page-bonmun" aria-label="본문">
           <div class="page-label">📖 본문</div>
@@ -147,6 +171,14 @@
             <p>좌측에서 날짜를 선택하세요</p>
           </div>
           <div class="markdown-body" id="bonmun-body"></div>
+          <!-- 저작권 · 제작 안내 — 쪽 맨 아래까지 읽으면 보임 -->
+          <footer class="site-footer">
+            <!-- 넓은 화면: 전체 문구 / 좁은 화면: 같은 내용을 두 줄로 줄임 -->
+            <p class="ft-long">성경 본문 「성경전서 개역개정판」 © 재단법인 대한성서공회 · 해설 © 사단법인 성서유니온선교회</p>
+            <p class="ft-long">이 페이지는 비영리 목적의 성경 묵상과 나눔을 위해 만들었습니다 · 만든 이 <a href="mailto:ocean3251@naver.com">ocean3251@naver.com</a></p>
+            <p class="ft-short">개역개정 © 대한성서공회 · 해설 © 성서유니온선교회</p>
+            <p class="ft-short">비영리 묵상 · 나눔용 · 만든 이 <a href="mailto:ocean3251@naver.com">ocean3251@naver.com</a></p>
+          </footer>
         </section>
       </div>
 
@@ -177,65 +209,63 @@
           </section>
         </div>
       </div>
-
-      <!-- 저작권 · 제작 안내 (맨 아래 흐린 글씨) -->
-      <footer class="site-footer">
-        <!-- 넓은 화면: 전체 문구 / 좁은 화면: 같은 내용을 두 줄로 줄임 -->
-        <p class="ft-long">성경 본문 「성경전서 개역개정판」 © 재단법인 대한성서공회 · 해설 © 사단법인 성서유니온선교회</p>
-        <p class="ft-long">이 페이지는 비영리 목적의 성경 묵상과 나눔을 위해 만들었습니다 · 만든 이 <a href="mailto:ocean3251@naver.com">ocean3251@naver.com</a></p>
-        <p class="ft-short">개역개정 © 대한성서공회 · 해설 © 성서유니온선교회</p>
-        <p class="ft-short">비영리 묵상 · 나눔용 · 만든 이 <a href="mailto:ocean3251@naver.com">ocean3251@naver.com</a></p>
-      </footer>
     </main>
   </div>
 
-  <!-- 출석도장 -->
-  <div class="login-modal-backdrop" id="attend-backdrop" style="display:none" onclick="closeAttendance()"></div>
-  <div class="login-modal attend-modal" id="attend-modal" style="display:none" role="dialog" aria-label="출석도장">
+  <!-- 🗺️ 천로역정 순례길 — 지도 / 이야기 / 관문 -->
+  <div class="login-modal-backdrop" id="pilgrim-backdrop" style="display:none" onclick="closePilgrim()"></div>
+  <div class="login-modal pilgrim-modal" id="pilgrim-modal" style="display:none" role="dialog" aria-label="천로역정 순례길">
     <div class="login-modal-header">
-      <h3>📮 출석도장</h3>
-      <button class="modal-close" onclick="closeAttendance()" aria-label="닫기">✕</button>
+      <button class="chip pg-back" id="pg-back" onclick="pgBackToMap()" style="display:none">‹ 지도</button>
+      <h3 id="pg-title">🗺️ 천로역정 순례길</h3>
+      <button class="modal-close" onclick="closePilgrim()" aria-label="닫기">✕</button>
     </div>
-    <div class="login-modal-body attend-body">
-      <div class="attend-summary">
-        <div class="attend-big"><b id="att-streak">0</b><span>일 연속</span></div>
-        <div class="attend-sub" id="att-total"></div>
-      </div>
-      <div class="attend-punch" id="att-punch" aria-label="5일 도장판"></div>
-      <p class="attend-next" id="att-next"></p>
-      <div class="cal-nav">
-        <button class="cal-nav-btn" onclick="attendMonth(-1)" aria-label="이전 달">&#8249;</button>
-        <span class="cal-title" id="att-title"></span>
-        <button class="cal-nav-btn" onclick="attendMonth(1)" aria-label="다음 달">&#8250;</button>
-      </div>
-      <div class="cal-grid attend-grid" id="att-grid"></div>
-      <p class="login-help">하루 한 번 사이트를 열면 자동으로 찍혀요 · 이 브라우저에만 저장돼요</p>
-    </div>
-  </div>
+    <div class="login-modal-body pilgrim-body">
+      <section id="pg-view-map">
+        <div class="pg-status" id="pg-status"></div>
+        <div class="pg-board-wrap" id="pg-board-wrap"><div class="pg-board" id="pg-board"></div></div>
+        <div class="pg-panel" id="pg-missions"></div>
+        <div class="pg-panel" id="pg-items"></div>
+        <p class="login-help">존 버니언 《천로역정》 제1부를 따라 걷는 길이에요. 하루에 📖 말씀 열기 · ✏️ 메모나 나눔 · 🤝 공유로 최대 3칸,
+          관문에서는 그날 본문으로 퍼즐을 풀어요. 진행은 이 브라우저에만 저장돼요.</p>
+      </section>
 
-  <!-- 말씀 퍼즐 -->
-  <div class="login-modal-backdrop" id="puzzle-backdrop" style="display:none" onclick="closePuzzle()"></div>
-  <div class="login-modal puzzle-modal" id="puzzle-modal" style="display:none" role="dialog" aria-label="말씀 퍼즐">
-    <div class="login-modal-header">
-      <h3>🧩 말씀 퍼즐</h3>
-      <button class="modal-close" onclick="closePuzzle()" aria-label="닫기">✕</button>
-    </div>
-    <div class="login-modal-body puzzle-body">
-      <div class="puzzle-modes" role="tablist">
-        <button class="puzzle-mode active" id="pz-mode-words"  onclick="setPuzzleMode('words')"  role="tab">조각 맞추기</button>
-        <button class="puzzle-mode"        id="pz-mode-verses" onclick="setPuzzleMode('verses')" role="tab">순서 맞추기</button>
-      </div>
-      <div class="puzzle-ref" id="pz-ref"></div>
-      <p class="puzzle-guide" id="pz-guide"></p>
-      <div class="puzzle-answer" id="pz-answer"></div>
-      <div class="puzzle-pool" id="pz-pool"></div>
-      <div class="puzzle-foot">
-        <span class="puzzle-status" id="pz-status"></span>
-        <span class="puzzle-actions">
-          <button class="chip" id="pz-hint" onclick="puzzleHint()">💡 힌트</button>
-          <button class="chip" onclick="startPuzzle()">🔀 다른 문제</button>
-        </span>
-      </div>
+      <section id="pg-view-scene" style="display:none">
+        <div class="pg-scene-place" id="pg-scene-place"></div>
+        <div class="pg-scene" onclick="pgNext()">
+          <div class="pg-speaker"><span class="pg-face" id="pg-face"></span><b class="pg-name" id="pg-name"></b></div>
+          <p class="pg-line" id="pg-line"></p>
+        </div>
+        <div class="pg-ref" id="pg-ref"></div>
+        <div class="pg-scene-foot">
+          <span class="pg-dots" id="pg-dots"></span>
+          <button class="login-btn primary" id="pg-next" onclick="pgNext()">다음 ▶</button>
+        </div>
+      </section>
+
+      <section id="pg-view-gate" style="display:none">
+        <div class="pg-gate-head" id="pg-gate-head"></div>
+        <div id="pg-choice"></div>
+        <div id="pg-puzzle">
+          <div class="pg-nopassage" id="pg-nopassage" style="display:none">
+            <p>관문 퍼즐은 그날 본문으로 풀어요. 본문을 펼친 뒤에 다시 와 주세요.</p>
+            <button class="login-btn primary" onclick="closePilgrim()">📖 본문 보러 가기</button>
+          </div>
+          <div class="puzzle-body" id="pg-puzzle-area">
+            <div class="puzzle-ref" id="pz-ref"></div>
+            <p class="puzzle-guide" id="pz-guide"></p>
+            <div class="puzzle-answer" id="pz-answer"></div>
+            <div class="puzzle-pool" id="pz-pool"></div>
+            <div class="puzzle-foot">
+              <span class="puzzle-status" id="pz-status"></span>
+              <span class="puzzle-actions">
+                <button class="chip" id="pz-hint" onclick="puzzleHint()">💡 힌트</button>
+                <button class="chip" id="pz-shuffle" onclick="startPuzzle()">🔀 다른 구절</button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -280,5 +310,7 @@
   <div class="toast-container" id="toast-container"></div>
 
   <script src="./app.js"></script>
+  <script src="./pilgrim-story.js"></script>
+  <script src="./pilgrim.js"></script>
 </body>
 </html>

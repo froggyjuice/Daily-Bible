@@ -214,8 +214,8 @@ async function loadEntries() {
 
     renderSidebar(entries);
 
-    // 데이터를 처음 불러왔을 때 출석 도장
-    if (!attendanceReady) { attendanceReady = true; stampAttendance(); }
+    // 데이터를 처음 불러왔을 때 순례길 '오늘 말씀' 걸음
+    if (!pgReady) pilgrimDaily();
 
     // 공유 링크 날짜 → 없으면 최신(= 오늘, 서버가 오늘 이후는 내려주지 않음)
     if (entries.length > 0) {
@@ -877,6 +877,7 @@ function onMemoInput() {
       else localStorage.removeItem(`memo:${dateStr}`);
       const t = new Date().toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
       document.getElementById('memo-status').textContent = `저장됨 · ${t}`;
+      if (value.trim().length >= 5) pilgrimEarn('note');   // 순례길 ✏️ 걸음 (하루 한 번)
     } catch {
       document.getElementById('memo-status').textContent = '⚠ 저장 실패 (브라우저 저장소를 쓸 수 없음)';
     }
@@ -975,6 +976,7 @@ async function submitComment(event) {
     bodyEl.value = '';
     await loadComments(currentDate);
     showToast('💬 등록했어요', 'success', 1800);
+    pilgrimEarn('note');   // 순례길 ✏️ 걸음 (하루 한 번)
   } catch (e) {
     showToast('등록 실패: ' + e.message, 'error');
   } finally {
@@ -1016,8 +1018,7 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   closeMore();
-  if (document.getElementById('puzzle-modal').style.display === 'flex') closePuzzle();
-  else if (document.getElementById('attend-modal').style.display === 'flex') closeAttendance();
+  if (pilgrimOpen()) closePilgrim();
   else if (dockOpen) toggleDock(null);
 });
 
@@ -1120,12 +1121,13 @@ async function sharePassage() {
 
   // 링크는 문구 끝에 이미 들어 있음 — url 을 따로 넘기면 앱에 따라 링크가 두 번 붙음
   if (navigator.share) {
-    try { await navigator.share({ text }); }
+    try { await navigator.share({ text }); pilgrimEarn('share'); }   // 순례길 🤝 걸음 (하루 한 번)
     catch (e) { if (e.name !== 'AbortError') showToast('공유 실패: ' + e.message, 'error'); }
     return;
   }
   await writeClipboard(text);
   showToast('🔗 본문과 링크를 복사했어요 — 붙여넣어 보내세요', 'success');
+  pilgrimEarn('share');
 }
 
 // 갓피플성경은 특정 본문으로 바로 가는 공개 링크가 없어서, 본문 위치를 복사한 뒤 앱을 연다
@@ -1150,363 +1152,6 @@ async function openGodpeople() {
 function isMobile() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-
-// ═══════════════════════════════════════════
-//  📮 출석도장 — 하루 한 번 사이트를 열면 자동으로 찍힘 (KST 날짜, 이 브라우저에만 저장)
-//  연속 5일마다(5, 10, 15…) 화면 가득 계절 아이콘이 떠오르는 축하
-// ═══════════════════════════════════════════
-const ATT_KEY = 'attendance';
-const ATT_GOAL = 5;
-let attYear = null, attMonth = null;   // 도장판 달력에 보이는 달
-
-function loadAttendance() {
-  try {
-    const days = JSON.parse(localStorage.getItem(ATT_KEY));
-    return Array.isArray(days) ? days : [];
-  } catch { return []; }
-}
-
-function attendanceStreak(days, today = todayKST()) {
-  const set = new Set(days);
-  let n = 0;
-  for (let d = today; set.has(d); d = offsetDate(d, -1)) n++;
-  return n;
-}
-
-// 오늘 도장이 없으면 찍고, 새로 찍었으면 알림 / 5일마다 축하
-function stampAttendance() {
-  const today = todayKST();
-  const days = loadAttendance();
-  if (!days.includes(today)) {
-    days.push(today);
-    days.sort();
-    try { localStorage.setItem(ATT_KEY, JSON.stringify(days)); }
-    catch { return; }   // 저장이 안 되는 브라우저(사생활 보호 모드 등)는 조용히 건너뜀
-    const streak = attendanceStreak(days, today);
-    if (streak % ATT_GOAL === 0) celebrateStreak(streak);
-    else showToast(`📮 오늘 출석 도장 쾅! 연속 ${streak}일째`, 'success', 2600);
-  }
-  updateAttendBadge(days);
-}
-
-function updateAttendBadge(days = loadAttendance()) {
-  const streak = attendanceStreak(days);
-  document.getElementById('btn-attend').innerHTML =
-    `📮 출석도장${streak ? ` <small>연속 ${streak}일</small>` : ''}`;
-}
-
-function openAttendance() {
-  const [y, m] = todayKST().split('-').map(Number);
-  attYear = y; attMonth = m - 1;
-  renderAttendance();
-  const modal = document.getElementById('attend-modal');
-  const backdrop = document.getElementById('attend-backdrop');
-  modal.style.display = 'flex';
-  backdrop.style.display = 'block';
-  setTimeout(() => { modal.classList.add('active'); backdrop.classList.add('active'); }, 10);
-}
-
-function closeAttendance() {
-  const modal = document.getElementById('attend-modal');
-  const backdrop = document.getElementById('attend-backdrop');
-  modal.classList.remove('active');
-  backdrop.classList.remove('active');
-  setTimeout(() => { modal.style.display = 'none'; backdrop.style.display = 'none'; }, 250);
-}
-
-function attendMonth(delta) {
-  attMonth += delta;
-  if (attMonth < 0) { attMonth = 11; attYear--; }
-  if (attMonth > 11) { attMonth = 0; attYear++; }
-  renderAttendance();
-}
-
-function renderAttendance() {
-  const days = loadAttendance();
-  const set = new Set(days);
-  const today = todayKST();
-  const streak = attendanceStreak(days, today);
-
-  document.getElementById('att-streak').textContent = streak;
-  document.getElementById('att-total').textContent = days.length ? `지금까지 ${days.length}일 출석` : '';
-
-  // 5칸 도장판: 이번 묶음에서 찍힌 만큼 계절 아이콘
-  const filled = streak === 0 ? 0 : (streak % ATT_GOAL || ATT_GOAL);
-  document.getElementById('att-punch').innerHTML = [...Array(ATT_GOAL)]
-    .map((_, i) => `<span class="punch${i < filled ? ' on' : ''}">${i + 1}</span>`).join('');
-  document.getElementById('att-next').textContent =
-    streak && streak % ATT_GOAL === 0
-      ? `🎉 연속 ${streak}일 달성! 다음 축하까지 ${ATT_GOAL}일`
-      : `다음 축하까지 ${ATT_GOAL - filled}일`;
-
-  // 달력: 도장 찍힌 날은 계절 아이콘
-  document.getElementById('att-title').textContent = `${attYear}년 ${attMonth + 1}월`;
-  const first = new Date(Date.UTC(attYear, attMonth, 1)).getUTCDay();
-  const last = new Date(Date.UTC(attYear, attMonth + 1, 0)).getUTCDate();
-  let html = ['일','월','화','수','목','금','토'].map(d => `<div class="cal-day-header">${d}</div>`).join('');
-  for (let i = 0; i < first; i++) html += '<div class="cal-cell empty"></div>';
-  for (let d = 1; d <= last; d++) {
-    const ds = `${attYear}-${String(attMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const cls = 'cal-cell' + (set.has(ds) ? ' stamped' : '') + (ds === today ? ' today' : '');
-    html += `<div class="${cls}"><span>${d}</span></div>`;
-  }
-  document.getElementById('att-grid').innerHTML = html;
-}
-
-// 연속 5일마다: 화면 가득 계절 아이콘 + 축하 카드 (3초 뒤 저절로 사라짐, 누르면 바로 닫힘)
-function celebrateStreak(streak) {
-  const layer = document.createElement('div');
-  layer.className = 'celebrate';
-  layer.innerHTML = `
-    <div class="celebrate-card">
-      <div class="celebrate-title">🎉 연속 ${streak}일 출석!</div>
-      <div class="celebrate-sub">매일 말씀 앞에 나아오는 걸음, 정말 귀해요</div>
-    </div>`;
-  for (let i = 0; i < 28; i++) {
-    const s = document.createElement('span');
-    s.className = 'celebrate-pop';
-    s.style.left = `${Math.random() * 100}%`;
-    s.style.animationDelay = `${Math.random() * 0.9}s`;
-    s.style.fontSize = `${1.2 + Math.random() * 1.6}rem`;
-    layer.appendChild(s);
-  }
-  const close = () => { layer.classList.add('out'); setTimeout(() => layer.remove(), 400); };
-  layer.addEventListener('click', close);
-  document.body.appendChild(layer);
-  setTimeout(close, 3600);
-}
-
-// 설치한 앱을 켜 둔 채 자정을 넘긴 경우: 다시 화면에 돌아오면 그날 도장
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && attendanceReady) stampAttendance();
-});
-let attendanceReady = false;
-
-
-// ═══════════════════════════════════════════
-//  🧩 말씀 퍼즐 — 그날 본문으로 하는 탭 퍼즐
-//  조각 맞추기: 한 절을 어절 조각으로 섞어 순서대로 누르기 (고른 절이 있으면 그 절)
-//  순서 맞추기: 이어지는 5절을 섞어 순서대로 누르기
-//  누를 때마다 바로 채점 — 틀리면 흔들림, 💡 힌트는 다음 조각을 깜빡여 줌
-// ═══════════════════════════════════════════
-const PZ_MAX_PIECES = 12;   // 긴 절은 어절을 묶어 조각 수를 이 정도로
-const PZ_VERSE_RUN = 5;     // 순서 맞추기에서 섞을 절 수
-
-let pzMode = 'words';
-let pz = null;              // 진행 중인 문제
-let pzTimer = null;
-let pzLastVerse = null;     // 같은 절이 연달아 나오지 않게
-
-function puzzleVerses() {
-  return [...document.querySelectorAll('#bonmun-body .verse-line')].map(el => ({
-    num: Number(el.dataset.verseNum),
-    text: el.querySelector('.verse-text').textContent.trim(),
-  }));
-}
-
-function shuffleIds(n) {
-  const ids = [...Array(n).keys()];
-  for (let tries = 0; tries < 10; tries++) {
-    for (let i = n - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [ids[i], ids[j]] = [ids[j], ids[i]];
-    }
-    if (n < 2 || ids.some((id, i) => id !== i)) break;  // 정답 순서 그대로면 다시 섞음
-  }
-  return ids;
-}
-
-function openPuzzle() {
-  if (!currentDate || !puzzleVerses().length) {
-    showToast('본문을 불러온 뒤에 할 수 있어요', 'info');
-    return;
-  }
-  const modal = document.getElementById('puzzle-modal');
-  const backdrop = document.getElementById('puzzle-backdrop');
-  modal.style.display = 'flex';
-  backdrop.style.display = 'block';
-  setTimeout(() => { modal.classList.add('active'); backdrop.classList.add('active'); }, 10);
-  startPuzzle();
-}
-
-function closePuzzle() {
-  clearInterval(pzTimer);
-  const modal = document.getElementById('puzzle-modal');
-  const backdrop = document.getElementById('puzzle-backdrop');
-  modal.classList.remove('active');
-  backdrop.classList.remove('active');
-  setTimeout(() => { modal.style.display = 'none'; backdrop.style.display = 'none'; }, 250);
-}
-
-function setPuzzleMode(mode) {
-  pzMode = mode;
-  document.getElementById('pz-mode-words').classList.toggle('active', mode === 'words');
-  document.getElementById('pz-mode-verses').classList.toggle('active', mode === 'verses');
-  startPuzzle();
-}
-
-function makeWordsPuzzle(verses) {
-  const picked = [...selectedVerses].map(el => Number(el.dataset.verseNum));
-  let verse = picked.length ? verses.find(v => v.num === Math.min(...picked)) : null;
-  if (!verse) {
-    let pool = verses.filter(v => v.text.split(/\s+/).length >= 4 && v.num !== pzLastVerse);
-    if (!pool.length) pool = verses;
-    verse = pool[Math.floor(Math.random() * pool.length)];
-  }
-  pzLastVerse = verse.num;
-
-  const words = verse.text.split(/\s+/).filter(Boolean);
-  const size = Math.ceil(words.length / PZ_MAX_PIECES);
-  const pieces = [];
-  for (let i = 0; i < words.length; i += size) pieces.push(words.slice(i, i + size).join(' '));
-
-  const b = currentBookInfo;
-  return {
-    ref: b ? `${b.book} ${b.chapter}:${verse.num}` : `${verse.num}절`,
-    guide: '말씀 조각을 순서대로 눌러 한 절을 완성하세요',
-    pieces,
-    labels: null,
-  };
-}
-
-function makeVersesPuzzle(verses) {
-  const n = Math.min(PZ_VERSE_RUN, verses.length);
-  const start = Math.floor(Math.random() * (verses.length - n + 1));
-  const run = verses.slice(start, start + n);
-  const b = currentBookInfo;
-  const range = `${run[0].num}-${run[run.length - 1].num}`;
-  return {
-    ref: b ? `${b.book} ${b.chapter}:${range}` : `${range}절`,
-    guide: '말씀이 이어지는 순서대로 절을 누르세요',
-    pieces: run.map(v => v.text),
-    labels: run.map(v => v.num),   // 맞힌 뒤에 절 번호를 보여줌
-  };
-}
-
-function startPuzzle() {
-  clearInterval(pzTimer);
-  const verses = puzzleVerses();
-  if (pzMode === 'verses' && verses.length < 2) { setPuzzleMode('words'); return; }
-
-  const p = pzMode === 'words' ? makeWordsPuzzle(verses) : makeVersesPuzzle(verses);
-  clearVerseSelection();
-  pz = { ...p, pool: shuffleIds(p.pieces.length), placed: [], mistakes: 0, hints: 0, start: Date.now(), done: false };
-
-  document.getElementById('pz-ref').textContent = p.ref;
-  document.getElementById('pz-guide').textContent = p.guide;
-  document.getElementById('pz-guide').classList.remove('done');
-  document.getElementById('pz-hint').disabled = false;
-  renderPuzzle();
-  pzTimer = setInterval(renderPuzzleStatus, 1000);
-}
-
-function puzzlePieceEl(id, placed) {
-  const btn = document.createElement('button');
-  btn.className = 'pz-piece' + (pzMode === 'verses' ? ' pz-verse' : '') + (placed ? ' placed' : '');
-  if (placed && pz.labels) {
-    const num = document.createElement('span');
-    num.className = 'pz-num';
-    num.textContent = pz.labels[id];
-    btn.appendChild(num);
-  }
-  btn.appendChild(document.createTextNode(pz.pieces[id]));
-  if (!placed) btn.onclick = () => pickPuzzlePiece(id, btn);
-  else btn.disabled = true;
-  return btn;
-}
-
-function renderPuzzle() {
-  const answer = document.getElementById('pz-answer');
-  const pool = document.getElementById('pz-pool');
-  answer.innerHTML = '';
-  pool.innerHTML = '';
-  pz.placed.forEach(id => answer.appendChild(puzzlePieceEl(id, true)));
-  if (!pz.placed.length) {
-    const hint = document.createElement('span');
-    hint.className = 'pz-empty';
-    hint.textContent = '여기에 순서대로 놓여요';
-    answer.appendChild(hint);
-  }
-  pz.pool.forEach(id => pool.appendChild(puzzlePieceEl(id, false)));
-  renderPuzzleStatus();
-}
-
-function renderPuzzleStatus() {
-  if (!pz) return;
-  const sec = Math.floor(((pz.doneAt || Date.now()) - pz.start) / 1000);
-  const time = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-  document.getElementById('pz-status').textContent = `⏱ ${time} · ❌ ${pz.mistakes} · 💡 ${pz.hints}`;
-}
-
-function pickPuzzlePiece(id, btn) {
-  if (pz.done) return;
-  const expected = pz.pieces[pz.placed.length];
-  // 같은 낱말이 두 번 나오는 절도 있으니 위치(id)가 아니라 글자로 비교
-  if (pz.pieces[id] !== expected) {
-    pz.mistakes++;
-    btn.classList.remove('wrong');
-    void btn.offsetWidth;
-    btn.classList.add('wrong');
-    renderPuzzleStatus();
-    return;
-  }
-  // 글자가 같은 조각이 여럿이면 정답 순서의 조각으로 놓기 (절 번호 표시가 맞도록)
-  const correctId = pz.placed.length;
-  const takeId = pz.pool.includes(correctId) && pz.pieces[correctId] === pz.pieces[id] ? correctId : id;
-  pz.pool = pz.pool.filter(x => x !== takeId);
-  pz.placed.push(takeId);
-  renderPuzzle();
-  if (!pz.pool.length) finishPuzzle();
-}
-
-function puzzleHint() {
-  if (!pz || pz.done) return;
-  const expected = pz.pieces[pz.placed.length];
-  const idx = pz.pool.findIndex(id => pz.pieces[id] === expected);
-  const el = document.getElementById('pz-pool').children[idx];
-  if (!el) return;
-  pz.hints++;
-  el.classList.remove('hint');
-  void el.offsetWidth;
-  el.classList.add('hint');
-  renderPuzzleStatus();
-}
-
-function finishPuzzle() {
-  pz.done = true;
-  pz.doneAt = Date.now();
-  clearInterval(pzTimer);
-  renderPuzzleStatus();
-  document.getElementById('pz-hint').disabled = true;
-
-  let solved = 1;
-  try {
-    const key = `puzzle:${currentDate}`;
-    solved = (Number(localStorage.getItem(key)) || 0) + 1;
-    localStorage.setItem(key, String(solved));
-  } catch {}
-
-  const perfect = !pz.mistakes && !pz.hints ? ' 완벽해요!' : '';
-  const guide = document.getElementById('pz-guide');
-  guide.textContent = `🎉 정답!${perfect} 오늘 ${solved}문제 맞혔어요 — 🔀 다른 문제로 계속해 보세요`;
-  guide.classList.add('done');
-  puzzleCelebrate();
-}
-
-// 계절 아이콘(🌼 🐬 🍂 ☃️)이 퐁퐁 떠오름
-function puzzleCelebrate() {
-  const box = document.getElementById('puzzle-modal');
-  for (let i = 0; i < 14; i++) {
-    const s = document.createElement('span');
-    s.className = 'pz-pop';
-    s.style.left = `${5 + Math.random() * 90}%`;
-    s.style.animationDelay = `${Math.random() * 0.4}s`;
-    s.style.fontSize = `${1 + Math.random() * 1.1}rem`;
-    box.appendChild(s);
-    setTimeout(() => s.remove(), 2200);
-  }
 }
 
 
