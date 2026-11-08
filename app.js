@@ -343,13 +343,49 @@ function extractBookInfo(md) {
   const title = titleMatch ? titleMatch[1].trim() : '';
   currentHymn = md.match(/찬송가\s*(\d+)\s*장/)?.[1] || null;
 
-  // 패턴: 사사기(Judges)13:15 - 13:25  또는  창세기(Genesis)1:1 - 1:31
-  const m = md.match(/([가-힣]+(?:\s[가-힣]+)*)\([^)]+\)(\d+):(\d+)\s*-\s*\d*:?(\d+)/);
-  if (m) return { book: m[1], chapter: m[2], verseStart: m[3], verseEnd: m[4], title };
-  // 영문 없는 경우 폴백
-  const m2 = md.match(/본문\s*:\s*([가-힣]+(?:\s[가-힣]+)*)\s*(\d+):(\d+)\s*-\s*\d*:?(\d+)/);
-  if (m2) return { book: m2[1], chapter: m2[2], verseStart: m2[3], verseEnd: m2[4], title };
+  // 패턴: 사사기(Judges)13:15 - 13:25  또는  고린도후서(2 Corinthians)6:1 - 7:1 (장이 넘어가는 본문)
+  const m = md.match(/([가-힣]+(?:\s[가-힣]+)*)\([^)]+\)(\d+):(\d+)\s*-\s*(?:(\d+):)?(\d+)/)
+    // 영문 없는 경우 폴백
+    || md.match(/본문\s*:\s*([가-힣]+(?:\s[가-힣]+)*)\s*(\d+):(\d+)\s*-\s*(?:(\d+):)?(\d+)/);
+  if (m) return { book: m[1], chapter: m[2], verseStart: m[3], chapterEnd: m[4] || m[2], verseEnd: m[5], title };
   return null;
+}
+
+// 본문 마크다운에 적힌 절 번호 그대로 (6장 18절 다음 '1.' → 7장 1절)
+// marked 는 이어진 목록을 하나의 <ol> 로 묶어 번호를 다시 매기므로 원래 번호를 따로 읽어 둠
+function listNumbers(md) {
+  return [...md.matchAll(/^(\d+)\.\s/gm)].map(x => Number(x[1]));
+}
+
+// 절 요소 → '6:18' 같은 키 (책갈피 · 퍼즐에서 장이 다른 같은 번호의 절을 구분)
+function verseKey(el) {
+  return `${el.dataset.chapter}:${el.dataset.verseNum}`;
+}
+
+function byVerseOrder(a, b) {
+  return a.dataset.idx - b.dataset.idx;
+}
+
+// 장이 넘어가는 본문인지 (6:1 - 7:1)
+function crossesChapter() {
+  return !!currentBookInfo && currentBookInfo.chapterEnd !== currentBookInfo.chapter;
+}
+
+// 고른 절들 → '6:17-18' · '6:18-7:1' · '6:1,3' (장 포함)
+function verseRef(els) {
+  const sorted = [...els].sort(byVerseOrder);
+  const parts = [];
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i;
+    while (j + 1 < sorted.length && Number(sorted[j + 1].dataset.idx) === Number(sorted[j].dataset.idx) + 1) j++;
+    const a = sorted[i].dataset, z = sorted[j].dataset;
+    const prevChapter = parts.length ? sorted[i - 1].dataset.chapter : null;
+    const head = a.chapter === prevChapter ? a.verseNum : `${a.chapter}:${a.verseNum}`;
+    parts.push(i === j ? head : `${head}-${z.chapter === a.chapter ? '' : z.chapter + ':'}${z.verseNum}`);
+    i = j + 1;
+  }
+  return parts.join(',');
 }
 
 function renderPanel(tab, md) {
@@ -360,7 +396,7 @@ function renderPanel(tab, md) {
   body.innerHTML = marked.parse(md);
 
   // <ol><li> → 커스텀 절 요소로 변환 (정확한 절 번호 표시)
-  convertOlToVerseElements(body);
+  convertOlToVerseElements(body, listNumbers(md));
 }
 
 // ═══════════════════════════════════════════
@@ -368,8 +404,14 @@ function renderPanel(tab, md) {
 // ═══════════════════════════════════════════
 const selectedVerses = new Set();
 
-function convertOlToVerseElements(container) {
-  const olElements = container.querySelectorAll('ol');
+function convertOlToVerseElements(container, mdNums = []) {
+  const olElements = [...container.querySelectorAll('ol')];
+  const total = olElements.reduce((n, ol) => n + ol.querySelectorAll(':scope > li').length, 0);
+  const useMd = mdNums.length === total;   // 개수가 맞을 때만 원래 번호 사용
+  let chapter = Number(currentBookInfo?.chapter) || 0;
+  let prev = 0;
+  let seq = 0;
+
   olElements.forEach(ol => {
     const startNum = parseInt(ol.getAttribute('start') || '1', 10);
     const lis = [...ol.querySelectorAll(':scope > li')];
@@ -377,10 +419,14 @@ function convertOlToVerseElements(container) {
     wrapper.className = 'verse-group';
 
     lis.forEach((li, idx) => {
-      const verseNum = startNum + idx;
+      const verseNum = useMd ? mdNums[seq] : startNum + idx;
+      if (chapter && verseNum <= prev) chapter++;   // 번호가 되돌아가면 다음 장
+      prev = verseNum;
       const div = document.createElement('div');
       div.className = 'verse-line';
       div.dataset.verseNum = verseNum;
+      div.dataset.chapter = chapter || '';
+      div.dataset.idx = seq++;
       div.innerHTML = `<span class="verse-num">${verseNum}</span><span class="verse-text">${li.innerHTML}</span>`;
       div.addEventListener('click', () => toggleVerseSelection(div));
       wrapper.appendChild(div);
@@ -424,26 +470,25 @@ function updateCopyBar() {
     document.body.appendChild(bar);
   }
 
-  const nums = [...selectedVerses]
-    .map(el => parseInt(el.dataset.verseNum))
-    .sort((a, b) => a - b);
-
-  const rangeLabel = buildRangeLabel(nums);
+  const rangeLabel = buildRangeLabel([...selectedVerses]);
   bar.querySelector('.vcb-info').textContent = `✝ ${rangeLabel} 선택됨`;
   bar.classList.add('active');
 }
 
-// ── 범위 레이블 생성 (15-18절 / 15,17절 등) ──
-function buildRangeLabel(nums) {
+// ── 범위 레이블 생성 (15-18절 / 15,17절 등, 장이 넘어가는 본문은 6:18-7:1) ──
+function buildRangeLabel(els) {
+  if (crossesChapter()) return verseRef(els);
+  const sorted = [...els].sort(byVerseOrder);
+  const nums = sorted.map(el => Number(el.dataset.verseNum));
   if (nums.length === 1) return `${nums[0]}절`;
   // 연속 범위인지 확인
-  const isContiguous = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
+  const isContiguous = sorted.every((el, i) => i === 0 || el.dataset.idx - sorted[i - 1].dataset.idx === 1);
   if (isContiguous) return `${nums[0]}-${nums[nums.length - 1]}절`;
   return nums.join(', ') + '절';
 }
 
 // ── 복사 머리글 생성 (날짜 + 제목 + 성경 레퍼런스) ──
-function buildCopyHeader(nums) {
+function buildCopyHeader(els) {
   const lines = [];
 
   // 1행: 날짜 + 제목  →  9/29 (화) "내 이름은 기묘자라"
@@ -455,19 +500,9 @@ function buildCopyHeader(nums) {
     lines.push(datePart + titlePart);
   }
 
-  // 2행: [사사기 13:15-16]
+  // 2행: [사사기 13:15-16]  /  [고린도후서 6:18-7:1]
   if (currentBookInfo) {
-    const { book, chapter } = currentBookInfo;
-    let ref;
-    if (nums.length === 1) {
-      ref = `${chapter}:${nums[0]}`;
-    } else {
-      const isContiguous = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
-      ref = isContiguous
-        ? `${chapter}:${nums[0]}-${nums[nums.length - 1]}`
-        : `${chapter}:${nums.join(',')}`;
-    }
-    lines.push(`[${book} ${ref}]`);
+    lines.push(`[${currentBookInfo.book} ${verseRef(els)}]`);
   }
 
   return lines.join('\n');
@@ -475,11 +510,8 @@ function buildCopyHeader(nums) {
 
 // ── 선택 절 복사 ──
 async function copySelectedVerses() {
-  const sorted = [...selectedVerses]
-    .sort((a, b) => a.dataset.verseNum - b.dataset.verseNum);
-
-  const nums = sorted.map(el => parseInt(el.dataset.verseNum));
-  const header = buildCopyHeader(nums);
+  const sorted = [...selectedVerses].sort(byVerseOrder);
+  const header = buildCopyHeader(sorted);
 
   const body = sorted
     .map(el => `${el.dataset.verseNum}. ${el.querySelector('.verse-text').textContent.trim()}`)
@@ -494,7 +526,7 @@ async function copySelectedVerses() {
     setTimeout(() => el.classList.remove('verse-copied'), 600);
   });
 
-  const rangeLabel = buildRangeLabel(nums);
+  const rangeLabel = buildRangeLabel(sorted);
   showToast(`📋 ${rangeLabel} 복사됨`, 'success', 2200);
   clearVerseSelection();
 }
@@ -729,26 +761,50 @@ function saveBookmarks(list) {
   document.getElementById('bookmark-badge').textContent = list.length || '';
 }
 
-function applyBookmarks() {
-  const marked = new Set(loadBookmarks().filter(b => b.date === currentDate).map(b => b.verse));
-  document.querySelectorAll('#bonmun-body .verse-line').forEach(el =>
-    el.classList.toggle('bookmarked', marked.has(Number(el.dataset.verseNum)))
-  );
-  fillBookmarkTexts();
+// 책갈피 → 절 키 (장 정보가 없는 옛 책갈피는 본문 첫 장으로 봄) — 현재 날짜의 책갈피에만 사용
+function bookmarkKey(b) {
+  return `${b.chapter || currentBookInfo?.chapter || ''}:${b.verse}`;
 }
 
-// 예전 형광펜에서 옮겨온 책갈피는 절 내용이 비어 있으니, 그 날짜를 열 때 채움
-function fillBookmarkTexts() {
+function findVerseEl(b) {
+  return [...document.querySelectorAll('#bonmun-body .verse-line')].find(el => verseKey(el) === bookmarkKey(b)) || null;
+}
+
+function applyBookmarks() {
+  repairBookmarks();
+  const marked = new Set(loadBookmarks().filter(b => b.date === currentDate).map(bookmarkKey));
+  document.querySelectorAll('#bonmun-body .verse-line').forEach(el =>
+    el.classList.toggle('bookmarked', marked.has(verseKey(el)))
+  );
+}
+
+// 그 날짜를 열 때 책갈피 정리
+// - 예전 형광펜에서 옮겨온 책갈피는 절 내용이 비어 있으니 채움
+// - 장이 넘어가는 본문에서 예전엔 7:1 을 6:19 처럼 이어 세어 저장했으니 실제 장:절로 고침
+function repairBookmarks() {
   const list = loadBookmarks();
+  const lines = [...document.querySelectorAll('#bonmun-body .verse-line')];
+  if (!lines.length) return;
+  const firstNum = Number(lines[0].dataset.verseNum);
+  const startChapter = lines[0].dataset.chapter;
   let changed = false;
   for (const b of list) {
-    if (b.date !== currentDate || b.text) continue;
-    const el = document.querySelector(`#bonmun-body .verse-line[data-verse-num="${b.verse}"] .verse-text`);
-    if (!el) continue;
+    if (b.date !== currentDate) continue;
+    let el = findVerseEl(b);
+    if (!el && (!b.chapter || b.chapter === startChapter)) {
+      const old = lines[b.verse - firstNum];
+      if (old && old.dataset.chapter !== startChapter) {
+        el = old;
+        b.verse = Number(old.dataset.verseNum);
+        b.chapter = old.dataset.chapter;
+        changed = true;
+      }
+    }
+    if (!el || b.text) continue;
     Object.assign(b, {
-      text: el.textContent.trim(),
+      text: el.querySelector('.verse-text').textContent.trim(),
       book: currentBookInfo?.book || '',
-      chapter: currentBookInfo?.chapter || '',
+      chapter: el.dataset.chapter,
       title: currentBookInfo?.title || '',
     });
     changed = true;
@@ -758,24 +814,23 @@ function fillBookmarkTexts() {
 
 // 선택한 절에 책갈피 꽂기 / 이미 다 꽂혀 있으면 빼기
 function bookmarkSelectedVerses() {
-  const els = [...selectedVerses].sort((a, b) => a.dataset.verseNum - b.dataset.verseNum);
-  const nums = els.map(el => Number(el.dataset.verseNum));
+  const els = [...selectedVerses].sort(byVerseOrder);
+  const keys = els.map(verseKey);
   let list = loadBookmarks();
-  const have = new Set(list.filter(b => b.date === currentDate).map(b => b.verse));
-  const allOn = nums.every(n => have.has(n));
+  const have = new Set(list.filter(b => b.date === currentDate).map(bookmarkKey));
+  const allOn = keys.every(k => have.has(k));
 
   if (allOn) {
-    list = list.filter(b => !(b.date === currentDate && nums.includes(b.verse)));
+    list = list.filter(b => !(b.date === currentDate && keys.includes(bookmarkKey(b))));
   } else {
     for (const el of els) {
-      const verse = Number(el.dataset.verseNum);
-      if (have.has(verse)) continue;
+      if (have.has(verseKey(el))) continue;
       list.push({
         date: currentDate,
         track: currentVersion,
-        verse,
+        verse: Number(el.dataset.verseNum),
         book: currentBookInfo?.book || '',
-        chapter: currentBookInfo?.chapter || '',
+        chapter: el.dataset.chapter,
         title: currentBookInfo?.title || '',
         text: el.querySelector('.verse-text').textContent.trim(),
         savedAt: Date.now(),
@@ -818,7 +873,8 @@ function migrateHighlights() {
 // ── 모아보기 ──
 function renderBookmarks() {
   const ul = document.getElementById('bookmark-list');
-  const list = loadBookmarks().sort((a, b) => b.date.localeCompare(a.date) || a.verse - b.verse);
+  const list = loadBookmarks().sort((a, b) =>
+    b.date.localeCompare(a.date) || (Number(a.chapter) || 0) - (Number(b.chapter) || 0) || a.verse - b.verse);
   document.getElementById('bookmark-count').textContent = list.length ? `${list.length}개` : '';
   ul.innerHTML = '';
   if (!list.length) {
@@ -860,7 +916,7 @@ function renderBookmarks() {
 }
 
 function removeBookmark(b) {
-  saveBookmarks(loadBookmarks().filter(x => !(x.date === b.date && x.verse === b.verse)));
+  saveBookmarks(loadBookmarks().filter(x => !(x.date === b.date && x.chapter === b.chapter && x.verse === b.verse)));
   if (b.date === currentDate) applyBookmarks();
   renderBookmarks();
 }
@@ -872,7 +928,7 @@ async function openBookmark(b) {
   if (currentDate !== b.date) await selectDate(b.date);
   const book = document.getElementById('book');
   book.scrollLeft = document.getElementById('page-bonmun').offsetLeft;  // 좁은 화면: 본문 쪽으로
-  const el = document.querySelector(`#bonmun-body .verse-line[data-verse-num="${b.verse}"]`);
+  const el = findVerseEl(b);
   if (!el) return;
   el.scrollIntoView({ block: 'center', behavior: 'smooth' });
   el.classList.add('verse-copied');
@@ -1092,6 +1148,7 @@ function toggleAudio() {
 function passageRef() {
   const b = currentBookInfo;
   if (!b) return '';
+  if (crossesChapter()) return `${b.book} ${b.chapter}:${b.verseStart}-${b.chapterEnd}:${b.verseEnd}`;
   return b.verseStart === b.verseEnd ? `${b.book} ${b.chapter}:${b.verseStart}` : `${b.book} ${b.chapter}:${b.verseStart}-${b.verseEnd}`;
 }
 
@@ -1106,7 +1163,9 @@ function playHymn() {
 function searchPassage(kind) {
   const b = currentBookInfo;
   if (!b) return;
-  const verses = `${b.chapter}장 ${b.verseStart}-${b.verseEnd}절`;
+  const verses = crossesChapter()
+    ? `${b.chapter}장 ${b.verseStart}절-${b.chapterEnd}장 ${b.verseEnd}절`
+    : `${b.chapter}장 ${b.verseStart}-${b.verseEnd}절`;
   const url = kind === 'youtube'
     ? `https://www.youtube.com/results?search_query=${encodeURIComponent(`매일성경 ${b.book} ${verses}`)}`
     : `https://www.google.com/search?q=${encodeURIComponent(`${b.book} ${verses} 묵상`)}`;
@@ -1128,7 +1187,7 @@ function buildShareText() {
   const title = currentBookInfo?.title ? ` 「${currentBookInfo.title}」` : '';
   const url = `${location.origin}/?date=${currentDate}${currentVersion === 'soon' ? '&v=soon' : ''}`;
 
-  const picked = [...selectedVerses].sort((a, b) => a.dataset.verseNum - b.dataset.verseNum);
+  const picked = [...selectedVerses].sort(byVerseOrder);
   const verseEls = picked.length ? picked : [document.querySelector('#bonmun-body .verse-line')].filter(Boolean);
   const verses = verseEls.map(el => el.querySelector('.verse-text').textContent.trim());
 

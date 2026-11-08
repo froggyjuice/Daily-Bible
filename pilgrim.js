@@ -554,8 +554,18 @@ let pzLastVerse = null;     // 같은 절이 연달아 나오지 않게
 function puzzleVerses() {
   return [...document.querySelectorAll('#bonmun-body .verse-line')].map(el => ({
     num: Number(el.dataset.verseNum),
+    chapter: el.dataset.chapter,
+    key: verseKey(el),
     text: el.querySelector('.verse-text').textContent.trim(),
   }));
+}
+
+// 퍼즐 머리 참조 — 장이 넘어가면 '6:18-7:1'
+function verseRunRef(first, last) {
+  const b = currentBookInfo;
+  if (!b) return first === last ? `${first.num}절` : `${first.num}-${last.num}절`;
+  if (first === last) return `${b.book} ${first.chapter}:${first.num}`;
+  return `${b.book} ${first.chapter}:${first.num}-${last.chapter === first.chapter ? '' : last.chapter + ':'}${last.num}`;
 }
 
 function shuffleIds(n) {
@@ -579,17 +589,16 @@ function splitPieces(text) {
 }
 
 function makeWordsPuzzle(verses) {
-  const picked = [...selectedVerses].map(el => Number(el.dataset.verseNum));
-  let verse = picked.length ? verses.find(v => v.num === Math.min(...picked)) : null;
+  const first = [...selectedVerses].sort(byVerseOrder)[0];
+  let verse = first ? verses.find(v => v.key === verseKey(first)) : null;
   if (!verse) {
-    let pool = verses.filter(v => v.text.split(/\s+/).length >= 4 && v.num !== pzLastVerse);
+    let pool = verses.filter(v => v.text.split(/\s+/).length >= 4 && v.key !== pzLastVerse);
     if (!pool.length) pool = verses;
     verse = pool[Math.floor(Math.random() * pool.length)];
   }
-  pzLastVerse = verse.num;
-  const b = currentBookInfo;
+  pzLastVerse = verse.key;
   return {
-    ref: b ? `${b.book} ${b.chapter}:${verse.num}` : `${verse.num}절`,
+    ref: verseRunRef(verse, verse),
     guide: '말씀 조각을 순서대로 눌러 한 절을 완성하세요',
     pieces: splitPieces(verse.text),
     labels: null,
@@ -600,10 +609,8 @@ function makeVersesPuzzle(verses) {
   const n = Math.min(PZ_VERSE_RUN, verses.length);
   const start = Math.floor(Math.random() * (verses.length - n + 1));
   const run = verses.slice(start, start + n);
-  const b = currentBookInfo;
-  const range = `${run[0].num}-${run[run.length - 1].num}`;
   return {
-    ref: b ? `${b.book} ${b.chapter}:${range}` : `${range}절`,
+    ref: verseRunRef(run[0], run[run.length - 1]),
     guide: '말씀이 이어지는 순서대로 절을 누르세요',
     pieces: run.map(v => v.text),
     labels: run.map(v => v.num),   // 맞힌 뒤에 절 번호를 보여줌
@@ -611,10 +618,10 @@ function makeVersesPuzzle(verses) {
 }
 
 function makeKeyPuzzle(keys) {
-  let pool = keys.filter(k => `${k.date}:${k.verse}` !== pzLastVerse);
+  let pool = keys.filter(k => `${k.date}:${k.chapter}:${k.verse}` !== pzLastVerse);
   if (!pool.length) pool = keys;
   const k = pool[Math.floor(Math.random() * pool.length)];
-  pzLastVerse = `${k.date}:${k.verse}`;
+  pzLastVerse = `${k.date}:${k.chapter}:${k.verse}`;
   return {
     ref: `🔑 ${k.book} ${k.chapter}:${k.verse}`,
     guide: '내 책갈피 말씀이 언약 열쇠가 돼요 — 조각을 순서대로 맞춰 문을 열어요',
