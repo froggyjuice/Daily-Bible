@@ -74,6 +74,7 @@ export async function fetchQt(session, date, track) {
   }
 
   const ref = `본문 : ${cont.Bible_name}${cont.Bible_chapter} 찬송가 ${cont.New_song}장`;
+  checkChapters(date, track, verses);
 
   // 해설 블록 순서는 사이트 JS(SelectBibleCont)와 동일
   const blocks = [];
@@ -100,6 +101,22 @@ export async function fetchQt(session, date, track) {
     mediaUrl: detail.mediaUrl,
     speaker: detail.speaker,
   };
+}
+
+// 마크다운에는 절 번호만 남고 장은 빠지므로, 화면(app.js chaptersFor)은
+// "번호가 되돌아가면 다음 장"으로 장을 다시 계산함 — 사이트 데이터가 그 규칙과 다르면 로그로 알림
+function checkChapters(date, track, verses) {
+  let chapter = Number(verses[0]?.Chapter);
+  let prev = 0;
+  for (const v of verses) {
+    if (!v.Verse) continue;
+    if (v.Verse <= prev) chapter++;
+    prev = v.Verse;
+    if (v.Chapter != null && Number(v.Chapter) !== chapter) {
+      console.warn(`[scrape] ${date} ${track}: 장 추론 불일치 — 사이트 ${v.Chapter}:${v.Verse}, 추론 ${chapter}:${v.Verse}`);
+      return;
+    }
+  }
 }
 
 // 공식 오디오 mp3 주소 + 낭독/해설자 (BodyMatterDetail 에만 있음, 매일성경/순 공통)

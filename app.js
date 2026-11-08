@@ -64,6 +64,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   toggleDock(null);
 
   await loadEntries();
+  migrateBookmarkChapters();
 });
 
 
@@ -317,7 +318,7 @@ async function selectDate(dateStr) {
 let currentBookInfo = null;  // { book: '사사기', chapter: '13' }
 let currentHymn = null;      // 새찬송가 장 번호 (본문 머리 '찬송가 221장')
 
-function parseAndRender(raw) {
+function splitSections(raw) {
   const sections = raw.split(/\n---\n/);
   let bonmunMd = '', haeseolMd = '';
 
@@ -329,6 +330,11 @@ function parseAndRender(raw) {
 
   if (!bonmunMd  && sections.length >= 2) bonmunMd  = sections[1].trim();
   if (!haeseolMd && sections.length >= 3) haeseolMd = sections[2].trim();
+  return { bonmunMd, haeseolMd };
+}
+
+function parseAndRender(raw) {
+  const { bonmunMd, haeseolMd } = splitSections(raw);
 
   // 본문 헤더에서 책 이름 · 장 · 절 정보 추출
   currentBookInfo = extractBookInfo(bonmunMd);
@@ -342,19 +348,47 @@ function extractBookInfo(md) {
   const titleMatch = md.match(/\*\*([^*]+)\*\*/);
   const title = titleMatch ? titleMatch[1].trim() : '';
   currentHymn = md.match(/찬송가\s*(\d+)\s*장/)?.[1] || null;
+  const ref = parseRef(md);
+  return ref ? { ...ref, title } : null;
+}
 
-  // 패턴: 사사기(Judges)13:15 - 13:25  또는  고린도후서(2 Corinthians)6:1 - 7:1 (장이 넘어가는 본문)
-  const m = md.match(/([가-힣]+(?:\s[가-힣]+)*)\([^)]+\)(\d+):(\d+)\s*-\s*(?:(\d+):)?(\d+)/)
-    // 영문 없는 경우 폴백
-    || md.match(/본문\s*:\s*([가-힣]+(?:\s[가-힣]+)*)\s*(\d+):(\d+)\s*-\s*(?:(\d+):)?(\d+)/);
-  if (m) return { book: m[1], chapter: m[2], verseStart: m[3], chapterEnd: m[4] || m[2], verseEnd: m[5], title };
-  return null;
+// 본문 머리 → 책 · 장 · 절
+//   사사기(Judges)13:15 - 13:25 · 이사야(Isaiah) 18:1 - 19:15 (영문 뒤 공백)
+//   고린도후서(2 Corinthians)6:1 - 7:1 (장이 넘어가는 본문) · 영문 이름 없음 · 한 절짜리 본문
+function parseRef(md) {
+  const m = md.match(/본문\s*:\s*([가-힣]+(?:\s[가-힣]+)*)\s*(?:\([^)]*\))?\s*(\d+):(\d+)(?:\s*-\s*(?:(\d+):)?(\d+))?/);
+  if (!m) return null;
+  return { book: m[1], chapter: m[2], verseStart: m[3], chapterEnd: m[4] || m[2], verseEnd: m[5] || m[3] };
 }
 
 // 본문 마크다운에 적힌 절 번호 그대로 (6장 18절 다음 '1.' → 7장 1절)
 // marked 는 이어진 목록을 하나의 <ol> 로 묶어 번호를 다시 매기므로 원래 번호를 따로 읽어 둠
 function listNumbers(md) {
   return [...md.matchAll(/^(\d+)\.\s/gm)].map(x => Number(x[1]));
+}
+
+// 절 번호들 → 각 절의 장 (본문 안에서 번호가 되돌아가면 다음 장)
+function chaptersFor(nums, startChapter) {
+  let chapter = Number(startChapter) || 0;
+  let prev = 0;
+  return nums.map(n => {
+    if (chapter && n <= prev) chapter++;
+    prev = n;
+    return chapter ? String(chapter) : '';
+  });
+}
+
+// 저장된 마크다운 → 본문 절 목록 [{chapter, verse, text}] (화면에 그리지 않고 읽을 때)
+function passageFromContent(raw) {
+  const { bonmunMd } = splitSections(raw);
+  const info = parseRef(bonmunMd);
+  const lines = [...bonmunMd.matchAll(/^(\d+)\.\s+(.*)$/gm)];
+  const chapters = chaptersFor(lines.map(x => Number(x[1])), info?.chapter);
+  return {
+    info,
+    title: bonmunMd.match(/\*\*([^*]+)\*\*/)?.[1].trim() || '',
+    seq: lines.map((x, i) => ({ chapter: chapters[i], verse: Number(x[1]), text: x[2].trim() })),
+  };
 }
 
 // 절 요소 → '6:18' 같은 키 (책갈피 · 퍼즐에서 장이 다른 같은 번호의 절을 구분)
@@ -407,25 +441,25 @@ const selectedVerses = new Set();
 function convertOlToVerseElements(container, mdNums = []) {
   const olElements = [...container.querySelectorAll('ol')];
   const total = olElements.reduce((n, ol) => n + ol.querySelectorAll(':scope > li').length, 0);
-  const useMd = mdNums.length === total;   // 개수가 맞을 때만 원래 번호 사용
-  let chapter = Number(currentBookInfo?.chapter) || 0;
-  let prev = 0;
+  // 개수가 맞을 때만 원래 번호 사용, 아니면 <ol start> 부터 차례로
+  const nums = mdNums.length === total ? mdNums : olElements.flatMap(ol => {
+    const startNum = parseInt(ol.getAttribute('start') || '1', 10);
+    return [...ol.querySelectorAll(':scope > li')].map((_, idx) => startNum + idx);
+  });
+  const chapters = chaptersFor(nums, currentBookInfo?.chapter);
   let seq = 0;
 
   olElements.forEach(ol => {
-    const startNum = parseInt(ol.getAttribute('start') || '1', 10);
     const lis = [...ol.querySelectorAll(':scope > li')];
     const wrapper = document.createElement('div');
     wrapper.className = 'verse-group';
 
-    lis.forEach((li, idx) => {
-      const verseNum = useMd ? mdNums[seq] : startNum + idx;
-      if (chapter && verseNum <= prev) chapter++;   // 번호가 되돌아가면 다음 장
-      prev = verseNum;
+    lis.forEach(li => {
+      const verseNum = nums[seq];
       const div = document.createElement('div');
       div.className = 'verse-line';
       div.dataset.verseNum = verseNum;
-      div.dataset.chapter = chapter || '';
+      div.dataset.chapter = chapters[seq];
       div.dataset.idx = seq++;
       div.innerHTML = `<span class="verse-num">${verseNum}</span><span class="verse-text">${li.innerHTML}</span>`;
       div.addEventListener('click', () => toggleVerseSelection(div));
@@ -778,38 +812,83 @@ function applyBookmarks() {
   );
 }
 
-// 그 날짜를 열 때 책갈피 정리
-// - 예전 형광펜에서 옮겨온 책갈피는 절 내용이 비어 있으니 채움
+// 책갈피 하나 정리 (고쳤으면 true)
 // - 장이 넘어가는 본문에서 예전엔 7:1 을 6:19 처럼 이어 세어 저장했으니 실제 장:절로 고침
-function repairBookmarks() {
-  const list = loadBookmarks();
-  const lines = [...document.querySelectorAll('#bonmun-body .verse-line')];
-  if (!lines.length) return;
-  const firstNum = Number(lines[0].dataset.verseNum);
-  const startChapter = lines[0].dataset.chapter;
+// - 예전 형광펜에서 옮겨온 책갈피는 절 내용이 비어 있으니 채움
+// seq: 그 날짜 본문 절 목록 [{chapter, verse, text}] (순서대로), meta: { book, title }
+function fixBookmark(b, seq, meta) {
+  if (!seq.length) return false;
+  const start = seq[0].chapter;
+  const key = `${b.chapter || start}:${b.verse}`;
+  let v = seq.find(s => `${s.chapter}:${s.verse}` === key);
   let changed = false;
-  for (const b of list) {
-    if (b.date !== currentDate) continue;
-    let el = findVerseEl(b);
-    if (!el && (!b.chapter || b.chapter === startChapter)) {
-      const old = lines[b.verse - firstNum];
-      if (old && old.dataset.chapter !== startChapter) {
-        el = old;
-        b.verse = Number(old.dataset.verseNum);
-        b.chapter = old.dataset.chapter;
-        changed = true;
-      }
+  if (!v && (!b.chapter || b.chapter === start)) {
+    const old = seq[b.verse - seq[0].verse];   // 예전 번호 = 첫 절 번호 + 순서
+    if (old && old.chapter !== start) {
+      v = old;
+      b.verse = old.verse;
+      b.chapter = old.chapter;
+      changed = true;
     }
-    if (!el || b.text) continue;
-    Object.assign(b, {
-      text: el.querySelector('.verse-text').textContent.trim(),
-      book: currentBookInfo?.book || '',
-      chapter: el.dataset.chapter,
-      title: currentBookInfo?.title || '',
-    });
+  }
+  if (!v) return changed;
+  if (!b.text) {
+    Object.assign(b, { text: v.text, chapter: v.chapter });
     changed = true;
   }
+  // 머리 읽기에 실패하던 날(이사야(Isaiah) 18:1 처럼 띄어 쓴 머리)은 책 이름 · 장이 비어 있음
+  if (!b.book && meta.book) {
+    Object.assign(b, { book: meta.book, chapter: v.chapter, title: b.title || meta.title || '' });
+    changed = true;
+  }
+  return changed;
+}
+
+// 그 날짜를 열 때 책갈피 정리 (화면에 그린 본문 기준)
+function repairBookmarks() {
+  const seq = [...document.querySelectorAll('#bonmun-body .verse-line')].map(el => ({
+    chapter: el.dataset.chapter,
+    verse: Number(el.dataset.verseNum),
+    text: el.querySelector('.verse-text').textContent.trim(),
+  }));
+  const meta = { book: currentBookInfo?.book, title: currentBookInfo?.title };
+  const list = loadBookmarks();
+  let changed = false;
+  for (const b of list) {
+    if (b.date === currentDate && fixBookmark(b, seq, meta)) changed = true;
+  }
   if (changed) saveBookmarks(list);
+}
+
+// 지난 날짜 책갈피도 한 번에 정리 — 책갈피가 있는 날짜마다 본문을 한 번씩 받아 봄
+// 다 끝나야 표시를 남기고, 중간에 실패하면 다음에 다시 시도
+const BM_FIX_KEY = 'bookmarksChapterFix';
+async function migrateBookmarkChapters() {
+  try { if (localStorage.getItem(BM_FIX_KEY)) return; } catch { return; }
+  const passages = {};
+  for (const b of loadBookmarks()) {
+    if (b.date in passages) continue;
+    try {
+      const data = await apiFetch(`/api/entry?track=${b.track || 'main'}&date=${b.date}`, { cache: 'no-cache' });
+      passages[b.date] = passageFromContent(data.content);
+    } catch (e) {
+      if (!/^404/.test(e.message)) return;   // 네트워크 문제 등 → 다음에
+      passages[b.date] = null;
+    }
+  }
+  // 받는 동안 바뀌었을 수 있으니 최신 목록에 적용
+  const list = loadBookmarks();
+  let changed = false;
+  for (const b of list) {
+    const p = passages[b.date];
+    if (p && fixBookmark(b, p.seq, { book: p.info?.book, title: p.title })) changed = true;
+  }
+  if (changed) {
+    saveBookmarks(list);
+    applyBookmarks();
+    if (dockOpen === 'bookmarks') renderBookmarks();
+  }
+  try { localStorage.setItem(BM_FIX_KEY, '1'); } catch {}
 }
 
 // 선택한 절에 책갈피 꽂기 / 이미 다 꽂혀 있으면 빼기
